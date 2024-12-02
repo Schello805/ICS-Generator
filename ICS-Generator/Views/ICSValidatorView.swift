@@ -2,16 +2,23 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct ICSValidatorView: View {
-    @ObservedObject var viewModel: EventViewModel
+    @EnvironmentObject var viewModel: EventViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showingFilePicker = false
     @State private var validationResult: ValidationResult?
-    @State private var showingValidationResult = false
     @State private var isValidating = false
     
     struct ValidationResult {
-        let isValid: Bool
-        let details: [String]
+        struct Check {
+            let name: String
+            let passed: Bool
+            let message: String?
+        }
+        
+        let checks: [Check]
+        var isValid: Bool {
+            checks.allSatisfy { $0.passed }
+        }
     }
     
     var body: some View {
@@ -21,17 +28,9 @@ struct ICSValidatorView: View {
                     Text("ICS-Datei Validator")
                         .font(.headline)
                     
-                    Text("Hier können Sie ICS-Dateien auf ihre Gültigkeit überprüfen. Der Validator prüft die Datei auf:")
+                    Text("Der Validator prüft Ihre ICS-Datei auf Standardkonformität und Kompatibilität.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        ValidatorCheckItem(text: "Erforderliche ICS-Felder")
-                        ValidatorCheckItem(text: "Korrekte Datums- und Zeitformate")
-                        ValidatorCheckItem(text: "Gültige Ereignisstruktur")
-                        ValidatorCheckItem(text: "Standard-Konformität")
-                    }
-                    .padding(.vertical, 8)
                 }
             }
             
@@ -40,28 +39,42 @@ struct ICSValidatorView: View {
                     showingFilePicker = true
                 }) {
                     HStack {
-                        Image(systemName: "doc.badge.arrow.up")
+                        Image(systemName: "doc.badge.gearshape")
                             .foregroundColor(.blue)
-                        Text("ICS-Datei auswählen")
+                        Text("ICS-Datei prüfen")
                     }
                 }
+                .disabled(isValidating)
             }
             
             if let result = validationResult {
                 Section {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Gesamtergebnis
                         HStack {
-                            Image(systemName: result.isValid ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            Image(systemName: result.isValid ? "checkmark.seal.fill" : "xmark.seal.fill")
                                 .foregroundColor(result.isValid ? .green : .red)
-                            Text(result.isValid ? "Datei ist gültig" : "Datei ist ungültig")
+                                .font(.title2)
+                            Text(result.isValid ? "ICS-Datei ist gültig" : "ICS-Datei ist ungültig")
                                 .font(.headline)
                         }
+                        .padding(.vertical, 4)
                         
-                        if !result.details.isEmpty {
-                            ForEach(result.details, id: \.self) { detail in
-                                Text("• " + detail)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                        // Einzelne Prüfungen
+                        ForEach(result.checks, id: \.name) { check in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Image(systemName: check.passed ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                        .foregroundColor(check.passed ? .green : .red)
+                                    Text(check.name)
+                                        .font(.subheadline)
+                                }
+                                if let message = check.message {
+                                    Text(message)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 28)
+                                }
                             }
                         }
                     }
@@ -79,127 +92,152 @@ struct ICSValidatorView: View {
             
             switch result {
             case .success(let urls):
-                guard let url = urls.first else { return }
+                guard let selectedFileURL = urls.first else { return }
+                
+                guard selectedFileURL.startAccessingSecurityScopedResource() else {
+                    validationResult = ValidationResult(checks: [
+                        .init(name: "Dateizugriff", passed: false, message: "Keine Berechtigung zum Lesen der Datei")
+                    ])
+                    isValidating = false
+                    return
+                }
+                
+                defer {
+                    selectedFileURL.stopAccessingSecurityScopedResource()
+                }
                 
                 do {
-                    let content = try String(contentsOf: url, encoding: .utf8)
+                    let tempDirectory = FileManager.default.temporaryDirectory
+                    let tempFileURL = tempDirectory.appendingPathComponent(selectedFileURL.lastPathComponent)
+                    
+                    if FileManager.default.fileExists(atPath: tempFileURL.path) {
+                        try FileManager.default.removeItem(at: tempFileURL)
+                    }
+                    
+                    try FileManager.default.copyItem(at: selectedFileURL, to: tempFileURL)
+                    let content = try String(contentsOf: tempFileURL, encoding: .utf8)
                     let lines = content.components(separatedBy: .newlines)
-                    var details: [String] = []
-                    var isValid = true
                     
-                    // Grundlegende Struktur prüfen
-                    if !lines.contains("BEGIN:VCALENDAR") {
-                        details.append("Fehlender BEGIN:VCALENDAR Tag")
-                        isValid = false
-                    }
-                    if !lines.contains("END:VCALENDAR") {
-                        details.append("Fehlender END:VCALENDAR Tag")
-                        isValid = false
-                    }
-                    if !lines.contains(where: { $0.hasPrefix("VERSION:") }) {
-                        details.append("Fehlende VERSION")
-                        isValid = false
-                    }
-                    if !lines.contains(where: { $0.hasPrefix("PRODID:") }) {
-                        details.append("Fehlende PRODID")
-                        isValid = false
-                    }
+                    var checks = [ValidationResult.Check]()
                     
-                    // Events prüfen
-                    var eventCount = 0
-                    var currentEventValid = true
-                    var inEvent = false
+                    // 1. Grundlegende Dateistruktur
+                    let hasVCalendar = lines.contains("BEGIN:VCALENDAR") && lines.contains("END:VCALENDAR")
+                    checks.append(.init(
+                        name: "ICS Dateistruktur",
+                        passed: hasVCalendar,
+                        message: hasVCalendar ? nil : "BEGIN:VCALENDAR oder END:VCALENDAR fehlt"
+                    ))
                     
+                    // 2. Version und Produkt-ID
+                    let hasVersion = lines.contains { $0.hasPrefix("VERSION:") }
+                    checks.append(.init(
+                        name: "Version",
+                        passed: hasVersion,
+                        message: hasVersion ? nil : "VERSION-Angabe fehlt"
+                    ))
+                    
+                    // 3. Event-Struktur
+                    let hasEventStart = lines.contains("BEGIN:VEVENT")
+                    let hasEventEnd = lines.contains("END:VEVENT")
+                    let validEventStructure = hasEventStart && hasEventEnd
+                    checks.append(.init(
+                        name: "Event-Struktur",
+                        passed: validEventStructure,
+                        message: validEventStructure ? nil : "BEGIN:VEVENT oder END:VEVENT fehlt"
+                    ))
+                    
+                    // 4. Pflichtfelder
+                    var missingFields = [String]()
+                    let requiredFields = ["SUMMARY:", "DTSTART", "DTEND"]
+                    let hasRequiredFields = requiredFields.allSatisfy { field in
+                        let hasField = lines.contains { $0.hasPrefix(field) }
+                        if !hasField {
+                            missingFields.append(field.replacingOccurrences(of: ":", with: ""))
+                        }
+                        return hasField
+                    }
+                    checks.append(.init(
+                        name: "Pflichtfelder",
+                        passed: hasRequiredFields,
+                        message: hasRequiredFields ? nil : "Fehlende Felder: \(missingFields.joined(separator: ", "))"
+                    ))
+                    
+                    // 5. Datumsformat
+                    var invalidDates = [String]()
                     for line in lines {
-                        if line == "BEGIN:VEVENT" {
-                            inEvent = true
-                            eventCount += 1
-                            currentEventValid = true
-                        } else if line == "END:VEVENT" {
-                            inEvent = false
-                            if currentEventValid {
-                                details.append("Event \(eventCount) ist gültig")
-                            }
-                        }
-                        
-                        if inEvent {
-                            // Pflichtfelder für Events prüfen
-                            let requiredFields = ["UID:", "DTSTAMP:", "DTSTART:"]
-                            for field in requiredFields {
-                                if !lines.contains(where: { $0.hasPrefix(field) }) {
-                                    details.append("Event \(eventCount): Fehlendes Pflichtfeld \(field)")
-                                    currentEventValid = false
-                                    isValid = false
-                                }
-                            }
-                            
-                            // Datumsformat prüfen
-                            if let dtstart = lines.first(where: { $0.hasPrefix("DTSTART:") }) {
-                                if !isValidICSDate(String(dtstart.dropFirst(8))) {
-                                    details.append("Event \(eventCount): Ungültiges DTSTART Format")
-                                    currentEventValid = false
-                                    isValid = false
-                                }
+                        if line.hasPrefix("DTSTART") || line.hasPrefix("DTEND") {
+                            let isAllDay = line.contains("VALUE=DATE:")
+                            let dateStr = line.components(separatedBy: ":").last ?? ""
+                            if parseICSDate(dateStr, isAllDay: isAllDay) == nil {
+                                invalidDates.append(line.prefix(7).description)
                             }
                         }
                     }
+                    let validDates = invalidDates.isEmpty
+                    checks.append(.init(
+                        name: "Datumsformate",
+                        passed: validDates,
+                        message: validDates ? nil : "Ungültige Datumsformate in: \(invalidDates.joined(separator: ", "))"
+                    ))
                     
-                    if eventCount == 0 {
-                        details.append("Keine Events in der Datei gefunden")
-                        isValid = false
+                    // 6. Optionale Felder
+                    var foundOptionalFields = [String]()
+                    let optionalFields = ["LOCATION:", "DESCRIPTION:", "RRULE:", "CATEGORIES:"]
+                    for field in optionalFields {
+                        if lines.contains(where: { $0.hasPrefix(field) }) {
+                            foundOptionalFields.append(field.replacingOccurrences(of: ":", with: ""))
+                        }
                     }
+                    checks.append(.init(
+                        name: "Optionale Felder",
+                        passed: true,
+                        message: foundOptionalFields.isEmpty ? "Keine optionalen Felder gefunden" : "Gefunden: \(foundOptionalFields.joined(separator: ", "))"
+                    ))
                     
-                    validationResult = ValidationResult(isValid: isValid, details: details)
+                    validationResult = ValidationResult(checks: checks)
                     
                 } catch {
-                    validationResult = ValidationResult(
-                        isValid: false,
-                        details: ["Fehler beim Lesen der Datei: \(error.localizedDescription)"]
-                    )
+                    validationResult = ValidationResult(checks: [
+                        .init(name: "Dateizugriff", passed: false, message: "Fehler beim Lesen der Datei: \(error.localizedDescription)")
+                    ])
                 }
                 
             case .failure(let error):
-                validationResult = ValidationResult(
-                    isValid: false,
-                    details: ["Fehler beim Öffnen der Datei: \(error.localizedDescription)"]
-                )
+                validationResult = ValidationResult(checks: [
+                    .init(name: "Dateizugriff", passed: false, message: "Fehler beim Auswählen der Datei: \(error.localizedDescription)")
+                ])
             }
             
             isValidating = false
         }
         .overlay {
             if isValidating {
-                ProgressView("Validiere ICS-Datei...")
-                    .padding()
-                    .background(Color(UIColor.systemBackground))
-                    .cornerRadius(10)
-                    .shadow(radius: 10)
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .overlay {
+                        VStack {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                            Text("Prüfe ICS-Datei...")
+                                .foregroundColor(.white)
+                                .padding(.top)
+                        }
+                    }
             }
         }
     }
     
-    private func isValidICSDate(_ dateString: String) -> Bool {
-        // Prüft ob das Datum dem Format yyyyMMddTHHmmssZ oder yyyyMMdd entspricht
-        let fullFormat = "^[0-9]{8}T[0-9]{6}Z$"
-        let dateOnlyFormat = "^[0-9]{8}$"
+    private func parseICSDate(_ dateString: String, isAllDay: Bool) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         
-        let fullPredicate = NSPredicate(format: "SELF MATCHES %@", fullFormat)
-        let dateOnlyPredicate = NSPredicate(format: "SELF MATCHES %@", dateOnlyFormat)
-        
-        return fullPredicate.evaluate(with: dateString) || dateOnlyPredicate.evaluate(with: dateString)
-    }
-}
-
-struct ValidatorCheckItem: View {
-    let text: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
-                .imageScale(.small)
-            Text(text)
-                .font(.subheadline)
+        if isAllDay {
+            formatter.dateFormat = "yyyyMMdd"
+        } else {
+            formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
         }
+        
+        return formatter.date(from: dateString.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 }

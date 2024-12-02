@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 import StoreKit
 
 struct SettingsView: View {
-    @ObservedObject var viewModel: EventViewModel
+    @EnvironmentObject var viewModel: EventViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var showingResetAlert = false
     @AppStorage("defaultAlert") private var defaultAlert: String = ICSEvent.AlertTime.fifteenMinutes.rawValue
@@ -13,9 +13,16 @@ struct SettingsView: View {
             Form {
                 Section {
                     NavigationLink {
-                        ICSValidatorView(viewModel: viewModel)
+                        ICSValidatorView()
+                            .environmentObject(viewModel)
                     } label: {
                         Label("ICS Validator", systemImage: "checkmark.shield")
+                    }
+                    
+                    NavigationLink {
+                        ICSImportView(viewModel: viewModel)
+                    } label: {
+                        Label("ICS Import", systemImage: "square.and.arrow.down")
                     }
                 }
                 
@@ -105,13 +112,6 @@ struct SettingsView: View {
             }
             .navigationTitle("Einstellungen")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Fertig") {
-                        dismiss()
-                    }
-                }
-            }
             .alert("Alle Termine löschen?", isPresented: $showingResetAlert) {
                 Button("Abbrechen", role: .cancel) {}
                 Button("Löschen", role: .destructive) {

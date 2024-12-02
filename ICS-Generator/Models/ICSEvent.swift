@@ -1,6 +1,6 @@
 import Foundation
 
-struct ICSEvent: Identifiable, Codable {
+struct ICSEvent: Identifiable, Codable, Hashable {
     let id: UUID
     var title: String
     var startDate: Date
@@ -8,6 +8,8 @@ struct ICSEvent: Identifiable, Codable {
     var isAllDay: Bool
     var location: String?
     var notes: String?
+    var url: String?
+    var travelTime: Int
     var alert: AlertTime
     var recurrence: RecurrenceRule
     var customRecurrence: CustomRecurrence?
@@ -20,6 +22,8 @@ struct ICSEvent: Identifiable, Codable {
          isAllDay: Bool = false,
          location: String? = nil, 
          notes: String? = nil,
+         url: String? = nil,
+         travelTime: Int = 0,
          alert: AlertTime = .fifteenMinutes,
          recurrence: RecurrenceRule = .none,
          customRecurrence: CustomRecurrence? = nil,
@@ -31,6 +35,8 @@ struct ICSEvent: Identifiable, Codable {
         self.isAllDay = isAllDay
         self.location = location
         self.notes = notes
+        self.url = url
+        self.travelTime = travelTime
         self.alert = alert
         self.recurrence = recurrence
         self.customRecurrence = customRecurrence
@@ -59,71 +65,275 @@ struct ICSEvent: Identifiable, Codable {
         }
     }
     
+    private func escapeString(_ string: String) -> String {
+        return string
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: ";", with: "\\;")
+            .replacingOccurrences(of: ",", with: "\\,")
+            .replacingOccurrences(of: "\n", with: "\\n")
+    }
+    
+    private func foldLine(_ line: String) -> String {
+        var result = ""
+        var currentLine = line
+        
+        while currentLine.count > 75 {
+            let index = currentLine.index(currentLine.startIndex, offsetBy: 75)
+            result += currentLine[..<index] + "\r\n "
+            currentLine = String(currentLine[index...])
+        }
+        result += currentLine
+        return result
+    }
+    
     func toICSString() -> String {
-        var components = [
-            "BEGIN:VCALENDAR",
-            "VERSION:2.0",
-            "PRODID:-//ICS Generator//DE",
-            "BEGIN:VEVENT",
-            "UID:\(id.uuidString)",
-            "SUMMARY:\(title)",
-            isAllDay ? "DTSTART;VALUE=DATE:\(formatDateForICS(startDate, isAllDay: true))" : "DTSTART:\(formatDateForICS(startDate))",
-            isAllDay ? "DTEND;VALUE=DATE:\(formatDateForICS(endDate, isAllDay: true))" : "DTEND:\(formatDateForICS(endDate))"
-        ]
+        var components: [String] = []
+        components.append("BEGIN:VCALENDAR")
+        components.append("VERSION:2.0")
+        components.append("PRODID:-//ICS Generator//DE")
+        components.append("CALSCALE:GREGORIAN")
+        components.append("METHOD:PUBLISH")
+        components.append("BEGIN:VEVENT")
         
-        if let location = location, !location.isEmpty {
-            components.append("LOCATION:\(location)")
+        // Required Properties
+        components.append("UID:\(id.uuidString)")
+        components.append("DTSTAMP:\(formatDate(Date()))")
+        components.append("DTSTART\(isAllDay ? ";VALUE=DATE" : ""):\(formatDate(startDate, isAllDay: isAllDay))")
+        components.append("DTEND\(isAllDay ? ";VALUE=DATE" : ""):\(formatDate(endDate, isAllDay: isAllDay))")
+        components.append("SUMMARY:\(escapeString(title))")
+        
+        // Optional Properties
+        if let location = location {
+            components.append("LOCATION:\(escapeString(location))")
         }
         
-        if let notes = notes, !notes.isEmpty {
-            components.append("DESCRIPTION:\(notes)")
+        if let notes = notes {
+            components.append("DESCRIPTION:\(escapeString(notes))")
         }
         
+        if let url = url {
+            components.append("URL:\(escapeString(url))")
+        }
+        
+        // Alert
         if alert != .none {
             components.append("BEGIN:VALARM")
             components.append("ACTION:DISPLAY")
-            components.append("DESCRIPTION:Reminder")
-            components.append("TRIGGER:\(alert.triggerValue)")
-            components.append("END:VALARM")
-        }
-        
-        if recurrence != .none {
-            if recurrence == .custom, let custom = customRecurrence {
-                components.append("RRULE:\(custom.toRRuleString())")
-            } else {
-                components.append("RRULE:FREQ=\(recurrence.rawValue)")
+            components.append("DESCRIPTION:\(escapeString(title))")
+            
+            let trigger: String
+            switch alert {
+            case .none:
+                trigger = ""
+            case .atTime:
+                trigger = "TRIGGER;VALUE=DATE-TIME:\(formatDate(startDate))"
+            case .fiveMinutes:
+                trigger = "TRIGGER:-PT5M"
+            case .tenMinutes:
+                trigger = "TRIGGER:-PT10M"
+            case .fifteenMinutes:
+                trigger = "TRIGGER:-PT15M"
+            case .thirtyMinutes:
+                trigger = "TRIGGER:-PT30M"
+            case .oneHour:
+                trigger = "TRIGGER:-PT1H"
+            case .twoHours:
+                trigger = "TRIGGER:-PT2H"
+            case .oneDay:
+                trigger = "TRIGGER:-P1D"
+            case .twoDays:
+                trigger = "TRIGGER:-P2D"
+            case .oneWeek:
+                trigger = "TRIGGER:-P1W"
+            }
+            if !trigger.isEmpty {
+                components.append(trigger)
+                components.append("END:VALARM")
             }
         }
         
-        if !attachments.isEmpty {
-            for attachment in attachments {
-                components.append("ATTACH;FILENAME=\(attachment.fileName);ENCODING=BASE64:\(attachment.data.base64EncodedString())")
+        // Recurrence
+        switch recurrence {
+        case .none:
+            break
+        case .daily:
+            components.append("RRULE:FREQ=DAILY")
+        case .weekly:
+            components.append("RRULE:FREQ=WEEKLY")
+        case .monthly:
+            components.append("RRULE:FREQ=MONTHLY")
+        case .yearly:
+            components.append("RRULE:FREQ=YEARLY")
+        case .custom:
+            if let custom = customRecurrence {
+                components.append("RRULE:" + custom.toRRuleString())
             }
         }
         
         components.append("END:VEVENT")
         components.append("END:VCALENDAR")
         
-        return components.joined(separator: "\r\n")
+        // Fold lines and join with CRLF
+        return components.map { foldLine($0) }.joined(separator: "\r\n") + "\r\n"
     }
     
-    private func formatDateForICS(_ date: Date, isAllDay: Bool = false) -> String {
+    private func formatDate(_ date: Date, isAllDay: Bool = false) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
+        formatter.timeZone = TimeZone(identifier: "UTC")
         
         if isAllDay {
             formatter.dateFormat = "yyyyMMdd"
         } else {
             formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-            formatter.timeZone = TimeZone(secondsFromGMT: 0)!
         }
         
         return formatter.string(from: date)
     }
-}
-
-extension ICSEvent {
+    
+    static func validate(icsString: String) -> ValidationResult {
+        let requiredFields = ["BEGIN:VEVENT", "UID:", "DTSTAMP:", "SUMMARY:", "DTSTART:", "DTEND:", "END:VEVENT"]
+        let lines = icsString.components(separatedBy: .newlines)
+        
+        // Überprüfe erforderliche Felder
+        for field in requiredFields {
+            if !lines.contains(where: { $0.hasPrefix(field) }) {
+                return .invalid("Erforderliches Feld fehlt: \(field)")
+            }
+        }
+        
+        // Überprüfe Datum-Format
+        for line in lines {
+            if line.hasPrefix("DTSTART:") || line.hasPrefix("DTEND:") || line.hasPrefix("DTSTAMP:") {
+                let dateString = String(line.split(separator: ":")[1])
+                if !isValidICSDate(dateString) {
+                    return .invalid("Ungültiges Datumsformat: \(dateString)")
+                }
+            }
+        }
+        
+        return .valid
+    }
+    
+    static func from(icsString: String) -> ICSEvent? {
+        let validation = validate(icsString: icsString)
+        guard validation.isValid else { return nil }
+        
+        var title = ""
+        var startDate = Date()
+        var endDate = Date()
+        var isAllDay = false
+        var location: String?
+        var notes: String?
+        var url: String?
+        var alert: AlertTime = .none
+        var recurrence: RecurrenceRule = .none
+        var inAlarm = false
+        var alarmTrigger: String?
+        
+        let lines = icsString.components(separatedBy: .newlines)
+        for line in lines {
+            if line == "BEGIN:VALARM" {
+                inAlarm = true
+            } else if line == "END:VALARM" {
+                inAlarm = false
+            } else if inAlarm && line.hasPrefix("TRIGGER:") {
+                alarmTrigger = String(line.dropFirst(8))
+            } else if line.hasPrefix("SUMMARY:") {
+                title = String(line.dropFirst(8))
+            } else if line.hasPrefix("DTSTART") {
+                if line.contains("VALUE=DATE:") {
+                    isAllDay = true
+                    startDate = parseAllDayDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                } else {
+                    startDate = parseDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                }
+            } else if line.hasPrefix("DTEND") {
+                if line.contains("VALUE=DATE:") {
+                    endDate = parseAllDayDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                } else {
+                    endDate = parseDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                }
+            } else if line.hasPrefix("LOCATION:") {
+                location = String(line.dropFirst(9))
+            } else if line.hasPrefix("DESCRIPTION:") {
+                notes = String(line.dropFirst(12))
+            } else if line.hasPrefix("URL:") {
+                url = String(line.dropFirst(4))
+            } else if line.hasPrefix("RRULE:") {
+                let rruleString = String(line.dropFirst(6))
+                recurrence = RecurrenceRule.from(icsString: rruleString)
+            }
+        }
+        
+        if let trigger = alarmTrigger {
+            switch trigger {
+            case "-PT0M": alert = .atTime
+            case "-PT5M": alert = .fiveMinutes
+            case "-PT10M": alert = .tenMinutes
+            case "-PT15M": alert = .fifteenMinutes
+            case "-PT30M": alert = .thirtyMinutes
+            case "-PT1H": alert = .oneHour
+            case "-PT2H": alert = .twoHours
+            case "-P1D": alert = .oneDay
+            case "-P2D": alert = .twoDays
+            case "-P1W": alert = .oneWeek
+            default: alert = .none
+            }
+        }
+        
+        return ICSEvent(
+            title: title,
+            startDate: startDate,
+            endDate: endDate,
+            isAllDay: isAllDay,
+            location: location,
+            notes: notes,
+            url: url,
+            travelTime: 0,
+            alert: alert,
+            recurrence: recurrence
+        )
+    }
+    
+    private static func isValidICSDate(_ dateString: String) -> Bool {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        return dateFormatter.date(from: dateString) != nil
+    }
+    
+    private static func parseDate(_ dateString: String) -> Date? {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        return dateFormatter.date(from: dateString)
+    }
+    
+    private static func parseAllDayDate(_ dateString: String) -> Date? {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd"
+        return dateFormatter.date(from: dateString)
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: ICSEvent, rhs: ICSEvent) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    enum ValidationResult {
+        case valid
+        case invalid(String)
+        
+        var isValid: Bool {
+            switch self {
+            case .valid: return true
+            case .invalid: return false
+            }
+        }
+    }
+    
     enum AlertTime: String, CaseIterable, Codable {
         case none = "none"
         case atTime = "at_time"
@@ -152,15 +362,78 @@ extension ICSEvent {
             case .oneWeek: return "-P1W"
             }
         }
+        
+        func toICSString() -> String {
+            switch self {
+            case .none: return ""
+            case .atTime: return "-PT0M"
+            case .fiveMinutes: return "-PT5M"
+            case .tenMinutes: return "-PT10M"
+            case .fifteenMinutes: return "-PT15M"
+            case .thirtyMinutes: return "-PT30M"
+            case .oneHour: return "-PT1H"
+            case .twoHours: return "-PT2H"
+            case .oneDay: return "-P1D"
+            case .twoDays: return "-P2D"
+            case .oneWeek: return "-P1W"
+            }
+        }
     }
     
-    enum RecurrenceRule: String, Codable {
+    enum RecurrenceRule: String, Codable, CaseIterable {
         case none = "NONE"
         case daily = "DAILY"
         case weekly = "WEEKLY"
         case monthly = "MONTHLY"
         case yearly = "YEARLY"
         case custom = "CUSTOM"
+        
+        var localizedString: String {
+            switch self {
+            case .none: return "Keine"
+            case .daily: return "Täglich"
+            case .weekly: return "Wöchentlich"
+            case .monthly: return "Monatlich"
+            case .yearly: return "Jährlich"
+            case .custom: return "Benutzerdefiniert"
+            }
+        }
+        
+        func toICSString(customRecurrence: CustomRecurrence?) -> String {
+            switch self {
+            case .none: return ""
+            case .daily: return "FREQ=DAILY"
+            case .weekly: return "FREQ=WEEKLY"
+            case .monthly: return "FREQ=MONTHLY"
+            case .yearly: return "FREQ=YEARLY"
+            case .custom:
+                if let custom = customRecurrence {
+                    return custom.toRRuleString()
+                } else {
+                    return ""
+                }
+            }
+        }
+        
+        static func from(icsString: String) -> RecurrenceRule {
+            let components = icsString.components(separatedBy: "=")
+            guard components.count >= 2,
+                  components[0] == "FREQ" else {
+                return .none
+            }
+            
+            switch components[1] {
+            case "DAILY": return .daily
+            case "WEEKLY": return .weekly
+            case "MONTHLY": return .monthly
+            case "YEARLY": return .yearly
+            default:
+                if icsString.contains("BYDAY") || icsString.contains("BYMONTHDAY") {
+                    return .custom
+                }
+                return .none
+            }
+        }
     }
     
     enum WeekDay: String, CaseIterable, Codable {
@@ -211,6 +484,13 @@ extension ICSEvent {
             case .jpeg: return "jpg"
             case .png: return "png"
             case .heic: return "heic"
+            }
+        }
+        
+        var iconName: String {
+            switch self {
+            case .pdf: return "doc.fill"
+            case .jpeg, .png, .heic: return "photo.fill"
             }
         }
         

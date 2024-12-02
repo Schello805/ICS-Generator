@@ -9,150 +9,349 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = EventViewModel()
-    @State private var showingEventEditor = false
-    @State private var showingSettings = false
-    @State private var showingExportOptions = false
+    
+    var body: some View {
+        TabView {
+            EventsView()
+                .tabItem {
+                    Label("Termine", systemImage: "calendar")
+                }
+            
+            SettingsView()
+                .tabItem {
+                    Label("Einstellungen", systemImage: "gear")
+                }
+        }
+        .environmentObject(viewModel)
+    }
+}
+
+struct EventsView: View {
+    @EnvironmentObject private var viewModel: EventViewModel
     
     var body: some View {
         NavigationStack {
-            List {
+            ZStack {
                 if viewModel.events.isEmpty {
-                    Section {
-                        EmptyStateView(showingEventEditor: $showingEventEditor)
-                    }
+                    EmptyStateView()
                 } else {
-                    ForEach(viewModel.events) { event in
-                        EventRow(
-                            event: event,
-                            onDelete: { viewModel.deleteEvent(event) },
-                            onExport: { viewModel.exportEvent(event) }
-                        )
-                    }
+                    EventList()
                 }
             }
-            .listStyle(InsetGroupedListStyle())
-            .navigationTitle("Termine")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("ICS Generator")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 16) {
-                        Button {
-                            showingSettings = true
-                        } label: {
-                            Image(systemName: "gear")
-                                .font(.system(size: 20))
-                        }
-                        
-                        if !viewModel.events.isEmpty {
-                            Button {
-                                showingExportOptions = true
-                            } label: {
-                                Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 20))
-                            }
-                        }
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        showingEventEditor = true
+                        viewModel.showingNewEventSheet = true
                     } label: {
                         Image(systemName: "plus")
-                            .font(.system(size: 20))
                     }
                 }
             }
-            .sheet(isPresented: $showingEventEditor) {
-                EventEditorView(event: nil, viewModel: viewModel)
+            .sheet(isPresented: $viewModel.showingNewEventSheet) {
+                NavigationStack {
+                    EventEditorView(event: nil)
+                }
             }
-            .sheet(isPresented: $showingSettings) {
-                SettingsView(viewModel: viewModel)
-            }
-            .actionSheet(isPresented: $showingExportOptions) {
-                ActionSheet(
-                    title: Text("Termine exportieren"),
-                    message: Text("Wählen Sie eine Option"),
-                    buttons: [
-                        .default(Text("Alle Termine exportieren")) {
-                            if let fileURL = viewModel.generateICS(for: viewModel.events) {
-                                let activityVC = UIActivityViewController(
-                                    activityItems: [fileURL],
-                                    applicationActivities: nil
-                                )
-                                
-                                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                                   let window = windowScene.windows.first,
-                                   let rootViewController = window.rootViewController {
-                                    
-                                    if let popoverController = activityVC.popoverPresentationController {
-                                        popoverController.sourceView = window
-                                        popoverController.sourceRect = CGRect(x: window.bounds.midX, y: window.bounds.midY, width: 0, height: 0)
-                                        popoverController.permittedArrowDirections = []
-                                    }
-                                    
-                                    rootViewController.present(activityVC, animated: true)
-                                }
-                            }
-                        },
-                        .cancel()
-                    ]
-                )
+            .sheet(item: $viewModel.editingEvent) { event in
+                NavigationStack {
+                    EventEditorView(event: event)
+                }
             }
         }
     }
 }
 
-struct EmptyStateView: View {
-    @Binding var showingEventEditor: Bool
+struct EventList: View {
+    @EnvironmentObject private var viewModel: EventViewModel
+    
+    var groupedEvents: [(String, [ICSEvent])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: viewModel.events) { event in
+            let date = event.startDate
+            if calendar.isDateInToday(date) {
+                return "Heute"
+            } else if calendar.isDateInTomorrow(date) {
+                return "Morgen"
+            } else if calendar.isDate(date, equalTo: Date(), toGranularity: .weekOfYear) {
+                let weekday = calendar.component(.weekday, from: date)
+                return calendar.weekdaySymbols[weekday - 1]
+            } else {
+                let formatter = DateFormatter()
+                formatter.dateFormat = "MMMM yyyy"
+                return formatter.string(from: date)
+            }
+        }
+        return grouped.sorted { date1, date2 in
+            let event1 = date1.value.min { $0.startDate < $1.startDate }
+            let event2 = date2.value.min { $0.startDate < $1.startDate }
+            return event1?.startDate ?? Date() < event2?.startDate ?? Date()
+        }
+    }
     
     var body: some View {
-        VStack(spacing: 32) {
-            // App Icon und Titel
-            VStack(spacing: 16) {
-                Image(systemName: "calendar.badge.plus")
-                    .font(.system(size: 80))
-                    .foregroundColor(.accentColor)
-                    .symbolEffect(.bounce, options: .repeating)
-                
-                Text("Willkommen bei ICS Generator")
-                    .font(.title)
-                    .fontWeight(.bold)
+        List {
+            ForEach(groupedEvents, id: \.0) { section, events in
+                Section(header: 
+                    Text(section)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .textCase(nil)
+                        .padding(.vertical, 8)
+                ) {
+                    ForEach(events.sorted { $0.startDate < $1.startDate }, id: \.self) { event in
+                        EventRowView(event: event)
+                            .listRowInsets(EdgeInsets())
+                            .listRowSeparator(.hidden)
+                            .padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        viewModel.showingNewEventSheet = true
+                    } label: {
+                        Label("Neuer Termin", systemImage: "calendar.badge.plus")
+                    }
+                    
+                    Button {
+                        viewModel.showingImportSheet = true
+                    } label: {
+                        Label("ICS importieren", systemImage: "square.and.arrow.down")
+                    }
+                    
+                    if !viewModel.events.isEmpty {
+                        Button {
+                            viewModel.showingExportOptions = true
+                        } label: {
+                            Label("Alle exportieren", systemImage: "square.and.arrow.up")
+                        }
+                        
+                        Button(role: .destructive) {
+                            viewModel.showingDeleteConfirmation = true
+                        } label: {
+                            Label("Alle löschen", systemImage: "trash")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+        .refreshable {
+            await viewModel.refreshEvents()
+        }
+        .alert("Alle Termine löschen?", isPresented: $viewModel.showingDeleteConfirmation) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Löschen", role: .destructive) {
+                viewModel.deleteAllEvents()
+            }
+        } message: {
+            Text("Diese Aktion kann nicht rückgängig gemacht werden.")
+        }
+    }
+}
+
+struct EventRowView: View {
+    let event: ICSEvent
+    @EnvironmentObject private var viewModel: EventViewModel
+    @State private var showingDeleteAlert = false
+    @State private var showingShareSheet = false
+    
+    private func createAndShareICSFile(for event: ICSEvent) -> URL {
+        let fileManager = FileManager.default
+        let tempDirectoryURL = fileManager.temporaryDirectory
+        let fileURL = tempDirectoryURL.appendingPathComponent("\(event.title).ics")
+        
+        do {
+            try event.toICSString().write(to: fileURL, atomically: true, encoding: .utf8)
+            return fileURL
+        } catch {
+            print("Error creating ICS file: \(error)")
+            return fileURL
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(event.title)
+                .font(.headline)
+                .lineLimit(1)
+            
+            HStack {
+                Image(systemName: "clock")
+                    .foregroundColor(.gray)
+                Text(formatEventTime(event))
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
             }
             
-            // Hauptfunktionen
-            VStack(alignment: .leading, spacing: 20) {
-                FeatureRow(icon: "calendar.badge.plus", title: "Termine erstellen", description: "Erstellen Sie Termine mit Wiederholungen und Erinnerungen")
-                FeatureRow(icon: "arrow.up.doc.fill", title: "ICS Export", description: "Exportieren Sie Ihre Termine im ICS-Format")
-                FeatureRow(icon: "repeat", title: "Wiederholungen", description: "Erstellen Sie wiederkehrende Termine nach Ihren Wünschen")
+            if let location = event.location {
+                HStack {
+                    Image(systemName: "mappin")
+                        .foregroundColor(.gray)
+                    Text(location)
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
+                        .lineLimit(1)
+                }
             }
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
+        .contextMenu {
+            Button {
+                viewModel.editEvent(event)
+            } label: {
+                Label("Bearbeiten", systemImage: "pencil")
+            }
+            
+            Button {
+                showingShareSheet = true
+            } label: {
+                Label("Teilen", systemImage: "square.and.arrow.up")
+            }
+            
+            Button(role: .destructive) {
+                showingDeleteAlert = true
+            } label: {
+                Label("Löschen", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                showingDeleteAlert = true
+            } label: {
+                Label("Löschen", systemImage: "trash")
+            }
+            
+            Button {
+                viewModel.editEvent(event)
+            } label: {
+                Label("Bearbeiten", systemImage: "pencil")
+            }
+            .tint(.blue)
+            
+            Button {
+                showingShareSheet = true
+            } label: {
+                Label("Teilen", systemImage: "square.and.arrow.up")
+            }
+            .tint(.green)
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            let fileURL = createAndShareICSFile(for: event)
+            ShareSheet(activityItems: [fileURL])
+        }
+        .alert("Termin löschen", isPresented: $showingDeleteAlert) {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Löschen", role: .destructive) {
+                viewModel.deleteEvent(event)
+            }
+        } message: {
+            Text("Möchten Sie diesen Termin wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.")
+        }
+    }
+    
+    private func formatEventTime(_ event: ICSEvent) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        
+        if event.isAllDay {
+            formatter.dateStyle = .medium
+            if Calendar.current.isDate(event.startDate, inSameDayAs: event.endDate) {
+                return formatter.string(from: event.startDate)
+            } else {
+                return "\(formatter.string(from: event.startDate)) - \(formatter.string(from: event.endDate))"
+            }
+        } else {
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            return "\(formatter.string(from: event.startDate)) - \(formatter.string(from: event.endDate))"
+        }
+    }
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+struct EmptyStateView: View {
+    @EnvironmentObject private var viewModel: EventViewModel
+    
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            Image(systemName: "calendar.badge.plus")
+                .font(.system(size: 80))
+                .foregroundColor(.accentColor)
+            
+            Text("Noch keine Termine")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Text("Erstellen Sie Ihren ersten Termin und exportieren Sie ihn als ICS-Datei.")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                FeatureRow(
+                    icon: "calendar.badge.plus",
+                    title: "Termine erstellen",
+                    description: "Erstellen Sie Termine mit allen wichtigen Details wie Datum, Ort und Erinnerungen."
+                )
+                
+                FeatureRow(
+                    icon: "arrow.up.doc",
+                    title: "Als ICS exportieren",
+                    description: "Exportieren Sie Ihre Termine im ICS-Format für die Verwendung in anderen Kalender-Apps."
+                )
+                
+                FeatureRow(
+                    icon: "bell",
+                    title: "Erinnerungen",
+                    description: "Legen Sie Erinnerungen fest, damit Sie keine wichtigen Termine verpassen."
+                )
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(radius: 5)
+            .padding()
+            
+            Button {
+                viewModel.showingNewEventSheet = true
+            } label: {
+                Label("Termin erstellen", systemImage: "plus.circle.fill")
+                    .font(.headline)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
             .padding(.horizontal)
             
-            // Aktions-Button
-            Button(action: {
-                showingEventEditor = true
-            }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                    Text("Ersten Termin erstellen")
-                        .fontWeight(.semibold)
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.accentColor)
-                .foregroundColor(.white)
-                .cornerRadius(15)
-                .shadow(radius: 5)
-            }
-            .padding(.horizontal, 40)
-            .padding(.top, 20)
+            Spacer()
         }
-        .padding(.vertical, 40)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemGroupedBackground))
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
     }
 }
 
@@ -179,48 +378,7 @@ struct FeatureRow: View {
     }
 }
 
-struct EventRow: View {
-    let event: ICSEvent
-    let onDelete: () -> Void
-    let onExport: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(event.title)
-                .font(.headline)
-            
-            Text(event.formattedDate)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-            
-            if let location = event.location, !location.isEmpty {
-                Text(location)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.vertical, 4)
-        .contextMenu {
-            Button(action: onExport) {
-                Label("Exportieren", systemImage: "square.and.arrow.up")
-            }
-            Button(role: .destructive, action: onDelete) {
-                Label("Löschen", systemImage: "trash")
-            }
-        }
-        .swipeActions(allowsFullSwipe: false) {
-            Button(action: onExport) {
-                Label("Exportieren", systemImage: "square.and.arrow.up")
-            }
-            .tint(.blue)
-            
-            Button(role: .destructive, action: onDelete) {
-                Label("Löschen", systemImage: "trash")
-            }
-        }
-    }
-}
-
 #Preview {
     ContentView()
+        .environmentObject(EventViewModel())
 }
