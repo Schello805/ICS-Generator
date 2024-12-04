@@ -2,7 +2,9 @@
 
 Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdateien.
 
-
+![Start](https://github.com/user-attachments/assets/f23244a0-e8a4-4f1f-a9f3-21623b40e9e8)
+![Settings](https://github.com/user-attachments/assets/20876f4a-3a71-499d-b7d9-1afb2eff217e)
+![ICS Validator](https://github.com/user-attachments/assets/4ac67454-f6ab-49fb-b6ea-9ce069f8ce7f)
 
 ## Features
 
