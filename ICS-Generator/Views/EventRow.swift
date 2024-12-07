@@ -2,8 +2,10 @@ import SwiftUI
 
 struct EventRow: View {
     let event: ICSEvent
+    @EnvironmentObject private var viewModel: EventViewModel
     @State private var isPressed = false
     @State private var showCopiedFeedback = false
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -61,6 +63,29 @@ struct EventRow: View {
         .contentShape(Rectangle())
         .scaleEffect(isPressed ? 0.98 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isPressed)
+        .contextMenu {
+            Button {
+                viewModel.editEvent(event)
+            } label: {
+                Label("Bearbeiten", systemImage: "pencil")
+            }
+            
+            Button(role: .destructive) {
+                showingDeleteAlert = true
+            } label: {
+                Label("Löschen", systemImage: "trash")
+            }
+        }
+        .alert("Termin löschen", isPresented: $showingDeleteAlert, actions: {
+            Button("Abbrechen", role: .cancel) { }
+            Button("Löschen", role: .destructive) {
+                withAnimation {
+                    viewModel.deleteEvent(event)
+                }
+            }
+        }, message: {
+            Text("Möchten Sie diesen Termin wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.")
+        })
     }
     
     private func formatEventDate(_ event: ICSEvent) -> String {

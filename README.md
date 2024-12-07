@@ -2,6 +2,8 @@
 
 Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdateien.
 
+
+
 ## Features
 
 - Umfassendes Termin-Management
@@ -72,6 +74,10 @@ Alle UI-Komponenten sind in SwiftUI implementiert und folgen den Apple Human Int
   - Verschiedene Hilfsviews für spezifische Funktionen
 - `ViewModels/`: View Models für die Geschäftslogik
 - `Utilities/`: Hilfsfunktionen und Erweiterungen
+
+## GitHub Wiki
+
+Für weitere Informationen über die Entwicklung des ICS Generators mit KI und Open-Source-Technologien, besuchen Sie bitte unsere [GitHub Wiki Seite](https://github.com/Schello805/ICS-Generator/wiki).
 
 ## Support
 

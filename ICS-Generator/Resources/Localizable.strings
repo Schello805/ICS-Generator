@@ -1,0 +1,27 @@
+// Common
+"Add Event" = "Add Event";
+"Edit Event" = "Edit Event";
+"Delete" = "Delete";
+"Cancel" = "Cancel";
+"Save" = "Save";
+"Share" = "Share";
+
+// Event Fields
+"Title" = "Title";
+"Start Date" = "Start Date";
+"End Date" = "End Date";
+"Location" = "Location";
+"Notes" = "Notes";
+"URL" = "URL";
+"All Day" = "All Day";
+
+// Time Groups
+"Today" = "Today";
+"Tomorrow" = "Tomorrow";
+"No Events" = "No Events";
+
+// Alerts
+"Success" = "Success";
+"Event saved successfully" = "Event saved successfully";
+"Error" = "Error";
+"Failed to save event" = "Failed to save event";

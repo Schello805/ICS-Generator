@@ -1,0 +1,142 @@
+// Common
+"Add Event" = "Termin hinzufügen";
+"Edit Event" = "Termin bearbeiten";
+"Delete" = "Löschen";
+"Cancel" = "Abbrechen";
+"Save" = "Speichern";
+"Share" = "Teilen";
+
+// Event Fields
+"Title" = "Titel";
+"Start Date" = "Startdatum";
+"End Date" = "Enddatum";
+"Location" = "Ort";
+"Notes" = "Notizen";
+"URL" = "URL";
+"All Day" = "Ganztägig";
+
+// Time Groups
+"Today" = "Heute";
+"Tomorrow" = "Morgen";
+"No Events" = "Keine Termine";
+
+// Alerts
+"Success" = "Erfolg";
+"Event saved successfully" = "Termin erfolgreich gespeichert";
+"Error" = "Fehler";
+"Failed to save event" = "Fehler beim Speichern des Termins";
+
+// Navigation
+"Events" = "Termine";
+"Settings" = "Einstellungen";
+"ICS Generator" = "ICS Generator";
+
+// Actions
+"Edit" = "Bearbeiten";
+"Delete" = "Löschen";
+"Create Event" = "Termin erstellen";
+
+// Empty State
+"No Events" = "Keine Termine";
+"Create your first event and export it as an ICS file." = "Erstellen Sie Ihren ersten Termin und exportieren Sie ihn als ICS-Datei.";
+
+// Features
+"Create Events" = "Termine erstellen";
+"Create events with all important details like date, location and reminders." = "Erstellen Sie Termine mit allen wichtigen Details wie Datum, Ort und Erinnerungen.";
+"Export as ICS" = "Als ICS exportieren";
+"Export your events in ICS format for use in other calendar apps." = "Exportieren Sie Ihre Termine im ICS-Format für die Verwendung in anderen Kalender-Apps.";
+"Reminders" = "Erinnerungen";
+"Set reminders so you don't miss important events." = "Legen Sie Erinnerungen fest, damit Sie wichtige Termine nicht verpassen.";
+
+// Event Editor
+"New Event" = "Neuer Termin";
+"Done" = "Fertig";
+"Title" = "Titel";
+"All Day" = "Ganztägig";
+"Location" = "Ort";
+"Travel Time" = "Reisezeit";
+"None" = "Keine";
+"5 Minutes" = "5 Minuten";
+"15 Minutes" = "15 Minuten";
+"30 Minutes" = "30 Minuten";
+"1 Hour" = "1 Stunde";
+"2 Hours" = "2 Stunden";
+"Notes" = "Notizen";
+"Alert" = "Erinnerung";
+"1 Day" = "1 Tag";
+"2 Days" = "2 Tage";
+"1 Week" = "1 Woche";
+
+// Recurrence
+"Recurrence" = "Wiederholung";
+"Daily" = "Täglich";
+"Weekly" = "Wöchentlich";
+"Monthly" = "Monatlich";
+"Yearly" = "Jährlich";
+"Custom" = "Benutzerdefiniert";
+"Ends" = "Endet";
+"Never" = "Nie";
+"On" = "Am";
+"Day" = "Tag";
+"Days" = "Tage";
+"Week" = "Woche";
+"Weeks" = "Wochen";
+"Month" = "Monat";
+"Months" = "Monate";
+"Year" = "Jahr";
+"Years" = "Jahre";
+"Custom Recurrence" = "Benutzerdefinierte Wiederholung";
+
+// Attachments
+"Photos" = "Fotos";
+"Documents" = "Dokumente";
+"Add Attachment" = "Anhang hinzufügen";
+
+// Date Time
+"Start" = "Start";
+"End" = "Ende";
+
+// Delete Confirmation
+"Delete Event" = "Termin löschen";
+"Are you sure you want to delete the event '%@'?" = "Sind Sie sicher, dass Sie den Termin '%@' löschen möchten?";
+
+// Settings
+"Default Settings" = "Standard-Einstellungen";
+"Default Reminder" = "Standard-Erinnerung";
+"Data" = "Daten";
+"Delete All Events" = "Alle Termine löschen";
+"Delete All Events?" = "Alle Termine löschen?";
+"This action cannot be undone." = "Diese Aktion kann nicht rückgängig gemacht werden.";
+"App Information" = "App-Information";
+"Version" = "Version";
+"GitHub Repository" = "GitHub Repository";
+"Rate App" = "App bewerten";
+"Help & Support" = "Hilfe & Support";
+"Contact Support" = "Support kontaktieren";
+"Privacy Policy" = "Datenschutzerklärung";
+"Terms of Use" = "Nutzungsbedingungen";
+
+// Reminders
+"None" = "Keine";
+"At Start Time" = "Zur Startzeit";
+"5 Minutes Before" = "5 Minuten vorher";
+"10 Minutes Before" = "10 Minuten vorher";
+"15 Minutes Before" = "15 Minuten vorher";
+"30 Minutes Before" = "30 Minuten vorher";
+"1 Hour Before" = "1 Stunde vorher";
+"2 Hours Before" = "2 Stunden vorher";
+"1 Day Before" = "1 Tag vorher";
+"2 Days Before" = "2 Tage vorher";
+"1 Week Before" = "1 Woche vorher";
+
+// Button actions
+"Abbrechen" = "Abbrechen";
+"Speichern" = "Speichern";
+
+// Menu Items
+"Add Event" = "Termin hinzufügen";
+"ICS Validator" = "ICS Validator";
+"Settings" = "Einstellungen";
+"Export All Events" = "Alle Termine exportieren";
+"Import ICS" = "ICS importieren";
+"Delete All Events" = "Alle Termine löschen";

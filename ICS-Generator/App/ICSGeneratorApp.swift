@@ -2,7 +2,11 @@ import SwiftUI
 
 @main
 struct ICSGeneratorApp: App {
-    @StateObject private var viewModel = EventViewModel()
+    @StateObject private var viewModel: EventViewModel
+    
+    init() {
+        _viewModel = StateObject(wrappedValue: EventViewModel())
+    }
     
     var body: some Scene {
         #if os(macOS)
@@ -14,36 +18,36 @@ struct ICSGeneratorApp: App {
             }
             .commands {
                 CommandGroup(after: .newItem) {
-                    Button("Neuer Termin") {
+                    Button(NSLocalizedString("Neuer Termin", comment: "Add event menu item")) {
                         viewModel.showingNewEventSheet = true
                     }
                     .keyboardShortcut("n", modifiers: .command)
                     
-                    Button("ICS Validator") {
+                    Button(NSLocalizedString("ICS Validator", comment: "ICS validator menu item")) {
                         viewModel.showingValidatorSheet = true
                     }
                     .keyboardShortcut("v", modifiers: [.command, .shift])
                     
-                    Button("Einstellungen") {
+                    Button(NSLocalizedString("Einstellungen", comment: "Settings menu item")) {
                         viewModel.showingSettings = true
                     }
                     .keyboardShortcut(",", modifiers: .command)
                 }
                 
                 CommandGroup(after: .importExport) {
-                    Button("Alle Termine exportieren") {
+                    Button(NSLocalizedString("Alle Termine exportieren", comment: "Export all events menu item")) {
                         viewModel.showingExportOptions = true
                     }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
                     
-                    Button("ICS importieren") {
+                    Button(NSLocalizedString("ICS importieren", comment: "Import ICS menu item")) {
                         viewModel.showingImportSheet = true
                     }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
                 }
                 
                 CommandGroup(after: .systemServices) {
-                    Button("Alle Termine löschen") {
+                    Button(NSLocalizedString("Alle Termine löschen", comment: "Delete all events menu item")) {
                         viewModel.showingDeleteConfirmation = true
                     }
                     .keyboardShortcut(.delete, modifiers: [.command, .shift])

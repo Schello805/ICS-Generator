@@ -40,14 +40,12 @@ class EventViewModel: ObservableObject {
     func addEvent(_ event: ICSEvent) {
         events.append(event)
         saveEvents()
-        showSuccessMessage()
     }
     
     func updateEvent(_ event: ICSEvent) {
         if let index = events.firstIndex(where: { $0.id == event.id }) {
             events[index] = event
             saveEvents()
-            showSuccessMessage()
         }
     }
     
@@ -61,11 +59,6 @@ class EventViewModel: ObservableObject {
         saveEvents()
     }
     
-    @MainActor
-    func refreshEvents() async {
-        loadEvents()
-    }
-    
     func editEvent(_ event: ICSEvent) {
         editingEvent = event
         showingEditSheet = true
@@ -73,24 +66,23 @@ class EventViewModel: ObservableObject {
     
     func shareEvent(_ event: ICSEvent) {
         let icsString = generateICSString(for: [event])
-        Platform.share(items: [icsString]) { success in
+        Platform.share(items: [icsString]) { [self] success in
             if success {
-                self.showSuccessMessage()
-            } else {
-                self.showError("Fehler beim Teilen des Termins")
+                self.showSuccess()
             }
         }
     }
     
-    func exportAllEvents() {
-        let icsString = generateICSString(for: events)
-        Platform.share(items: [icsString]) { success in
-            if success {
-                self.showSuccessMessage()
-            } else {
-                self.showError("Fehler beim Exportieren der Termine")
-            }
+    private func showSuccess() {
+        showingSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            self.showingSuccess = false
         }
+    }
+    
+    private func showError(_ message: String) {
+        errorMessage = message
+        showingError = true
     }
     
     func importICSString(_ icsString: String) {
@@ -115,15 +107,11 @@ class EventViewModel: ObservableObject {
         return components.joined(separator: "\r\n")
     }
     
-    func showSuccessMessage() {
-        showingSuccess = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            self.showingSuccess = false
+    @MainActor
+    func validateICSString(_ icsString: String) -> Bool {
+        guard let _ = ICSEvent.from(icsString: icsString) else {
+            return false
         }
-    }
-    
-    func showError(_ error: String) {
-        errorMessage = error
-        showingError = true
+        return true
     }
 }

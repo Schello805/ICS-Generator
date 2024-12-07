@@ -5,29 +5,30 @@ import StoreKit
 struct SettingsView: View {
     @EnvironmentObject var viewModel: EventViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingResetAlert = false
     @AppStorage("defaultAlert") private var defaultAlert: String = ICSEvent.AlertTime.fifteenMinutes.rawValue
     
     var body: some View {
-        NavigationView {
-            Form {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            List {
                 Section {
                     NavigationLink {
                         ICSValidatorView()
                             .environmentObject(viewModel)
                     } label: {
-                        Label("ICS Validator", systemImage: "checkmark.shield")
+                        Label(NSLocalizedString("ICS Validator", comment: "ICS Validator"), systemImage: "checkmark.shield")
                     }
                     
                     NavigationLink {
                         ICSImportView(viewModel: viewModel)
                     } label: {
-                        Label("ICS Import", systemImage: "square.and.arrow.down")
+                        Label(NSLocalizedString("ICS importieren", comment: "ICS Import"), systemImage: "square.and.arrow.down")
                     }
                 }
                 
-                Section(header: Text("Standard-Einstellungen")) {
-                    Picker("Standard-Erinnerung", selection: Binding(
+                Section(header: Text(NSLocalizedString("Standard-Einstellungen", comment: "Default settings section header"))) {
+                    Picker(NSLocalizedString("Standard-Erinnerung", comment: "Default reminder picker"), selection: Binding(
                         get: { ICSEvent.AlertTime(rawValue: defaultAlert) ?? .fifteenMinutes },
                         set: { defaultAlert = $0.rawValue }
                     )) {
@@ -38,25 +39,25 @@ struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("Daten")) {
+                Section(header: Text(NSLocalizedString("Daten", comment: "Data section header"))) {
                     Button(role: .destructive, action: {
                         showingResetAlert = true
                     }) {
-                        Label("Alle Termine löschen", systemImage: "trash")
+                        Label(NSLocalizedString("Alle Termine löschen", comment: "Delete all events button"), systemImage: "trash")
                     }
                 }
                 
-                Section(header: Text("App-Information")) {
+                Section(header: Text(NSLocalizedString("App-Information", comment: "App information section header"))) {
                     HStack {
-                        Text("Version")
+                        Text(NSLocalizedString("Version", comment: "Version"))
                         Spacer()
                         Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                             .foregroundColor(.secondary)
                     }
                     
-                    Link(destination: URL(string: "https://github.com/yourusername/ICS-Generator")!) {
+                    Link(destination: URL(string: "https://github.com/Schello805/ICS-Generator")!) {
                         HStack {
-                            Text("GitHub Repository")
+                            Text(NSLocalizedString("GitHub Repository", comment: "GitHub Repository"))
                             Spacer()
                             Image(systemName: "arrow.up.right.square")
                                 .foregroundColor(.blue)
@@ -73,7 +74,7 @@ struct SettingsView: View {
                         }
                     }) {
                         HStack {
-                            Text("App bewerten")
+                            Text(NSLocalizedString("Rate App", comment: "Rate app button"))
                             Spacer()
                             Image(systemName: "star.fill")
                                 .foregroundColor(.blue)
@@ -81,28 +82,28 @@ struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("Hilfe & Support")) {
-                    Link(destination: URL(string: "mailto:support@example.com")!) {
+                Section(header: Text(NSLocalizedString("Hilfe & Support", comment: "Help and support section header"))) {
+                    Link(destination: URL(string: "mailto:info@schellenberger.biz")!) {
                         HStack {
-                            Text("Support kontaktieren")
+                            Text(NSLocalizedString("Support kontaktieren", comment: "Contact support button"))
                             Spacer()
                             Image(systemName: "envelope")
                                 .foregroundColor(.blue)
                         }
                     }
                     
-                    Link(destination: URL(string: "https://example.com/privacy")!) {
+                    Link(destination: URL(string: "https://github.com/Schello805/ICS-generator/blob/iOSApp_ICS-Generator/PRIVACY.md")!) {
                         HStack {
-                            Text("Datenschutzerklärung")
+                            Text(NSLocalizedString("Datenschutz", comment: "Privacy policy button"))
                             Spacer()
                             Image(systemName: "hand.raised")
                                 .foregroundColor(.blue)
                         }
                     }
                     
-                    Link(destination: URL(string: "https://example.com/terms")!) {
+                    Link(destination: URL(string: "https://github.com/Schello805/ICS-generator/blob/iOSApp_ICS-Generator/README.md")!) {
                         HStack {
-                            Text("Nutzungsbedingungen")
+                            Text(NSLocalizedString("Nutzungsbedingungen", comment: "Terms of use button"))
                             Spacer()
                             Image(systemName: "doc.text")
                                 .foregroundColor(.blue)
@@ -110,18 +111,135 @@ struct SettingsView: View {
                     }
                 }
             }
-            .navigationTitle("Einstellungen")
+            .listStyle(.insetGrouped)
+            .navigationTitle(NSLocalizedString("Einstellungen", comment: "Settings title"))
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Alle Termine löschen?", isPresented: $showingResetAlert) {
-                Button("Abbrechen", role: .cancel) {}
-                Button("Löschen", role: .destructive) {
+            .alert(NSLocalizedString("Alle Termine löschen?", comment: "Delete all events alert title"), isPresented: $showingResetAlert) {
+                Button(NSLocalizedString("Abbrechen", comment: "Cancel button"), role: .cancel) {}
+                Button(NSLocalizedString("Löschen", comment: "Delete button"), role: .destructive) {
                     withAnimation {
                         viewModel.events.removeAll()
                         UserDefaults.standard.removeObject(forKey: "savedEvents")
                     }
                 }
             } message: {
-                Text("Diese Aktion kann nicht rückgängig gemacht werden.")
+                Text(NSLocalizedString("Diese Aktion kann nicht rückgängig gemacht werden.", comment: "Delete all events confirmation"))
+            }
+        } else {
+            NavigationStack {
+                Form {
+                    Section {
+                        NavigationLink {
+                            ICSValidatorView()
+                                .environmentObject(viewModel)
+                        } label: {
+                            Label(NSLocalizedString("ICS Validator", comment: "ICS Validator"), systemImage: "checkmark.shield")
+                        }
+                        
+                        NavigationLink {
+                            ICSImportView(viewModel: viewModel)
+                        } label: {
+                            Label(NSLocalizedString("ICS importieren", comment: "ICS Import"), systemImage: "square.and.arrow.down")
+                        }
+                    }
+                    
+                    Section(header: Text(NSLocalizedString("Standard-Einstellungen", comment: "Default settings section header"))) {
+                        Picker(NSLocalizedString("Standard-Erinnerung", comment: "Default reminder picker"), selection: Binding(
+                            get: { ICSEvent.AlertTime(rawValue: defaultAlert) ?? .fifteenMinutes },
+                            set: { defaultAlert = $0.rawValue }
+                        )) {
+                            ForEach(ICSEvent.AlertTime.allCases, id: \.self) { alertTime in
+                                Text(alertTimeString(alertTime))
+                                    .tag(alertTime)
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text(NSLocalizedString("Daten", comment: "Data section header"))) {
+                        Button(role: .destructive, action: {
+                            showingResetAlert = true
+                        }) {
+                            Label(NSLocalizedString("Alle Termine löschen", comment: "Delete all events button"), systemImage: "trash")
+                        }
+                    }
+                    
+                    Section(header: Text(NSLocalizedString("App-Information", comment: "App information section header"))) {
+                        HStack {
+                            Text(NSLocalizedString("Version", comment: "Version"))
+                            Spacer()
+                            Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Link(destination: URL(string: "https://github.com/Schello805/ICS-Generator")!) {
+                            HStack {
+                                Text(NSLocalizedString("GitHub Repository", comment: "GitHub Repository"))
+                                Spacer()
+                                Image(systemName: "arrow.up.right.square")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        
+                        Button(action: {
+                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                                if #available(iOS 18.0, *) {
+                                    AppStore.requestReview(in: windowScene)
+                                } else {
+                                    SKStoreReviewController.requestReview(in: windowScene)
+                                }
+                            }
+                        }) {
+                            HStack {
+                                Text(NSLocalizedString("Rate App", comment: "Rate app button"))
+                                Spacer()
+                                Image(systemName: "star.fill")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                    
+                    Section(header: Text(NSLocalizedString("Hilfe & Support", comment: "Help and support section header"))) {
+                        Link(destination: URL(string: "mailto:info@schellenberger.biz")!) {
+                            HStack {
+                                Text(NSLocalizedString("Support kontaktieren", comment: "Contact support button"))
+                                Spacer()
+                                Image(systemName: "envelope")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        
+                        Link(destination: URL(string: "https://github.com/Schello805/ICS-generator/blob/iOSApp_ICS-Generator/PRIVACY.md")!) {
+                            HStack {
+                                Text(NSLocalizedString("Datenschutz", comment: "Privacy policy button"))
+                                Spacer()
+                                Image(systemName: "hand.raised")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        
+                        Link(destination: URL(string: "https://github.com/Schello805/ICS-generator/blob/iOSApp_ICS-Generator/README.md")!) {
+                            HStack {
+                                Text(NSLocalizedString("Nutzungsbedingungen", comment: "Terms of use button"))
+                                Spacer()
+                                Image(systemName: "doc.text")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    }
+                }
+                .navigationTitle(NSLocalizedString("Einstellungen", comment: "Settings title"))
+                .navigationBarTitleDisplayMode(.inline)
+                .alert(NSLocalizedString("Alle Termine löschen?", comment: "Delete all events alert title"), isPresented: $showingResetAlert) {
+                    Button(NSLocalizedString("Abbrechen", comment: "Cancel button"), role: .cancel) {}
+                    Button(NSLocalizedString("Löschen", comment: "Delete button"), role: .destructive) {
+                        withAnimation {
+                            viewModel.events.removeAll()
+                            UserDefaults.standard.removeObject(forKey: "savedEvents")
+                        }
+                    }
+                } message: {
+                    Text(NSLocalizedString("Diese Aktion kann nicht rückgängig gemacht werden.", comment: "Delete all events confirmation"))
+                }
             }
         }
     }
@@ -129,27 +247,27 @@ struct SettingsView: View {
     private func alertTimeString(_ alertTime: ICSEvent.AlertTime) -> String {
         switch alertTime {
         case .none:
-            return "Keine"
+            return NSLocalizedString("Keine", comment: "None")
         case .atTime:
-            return "Zur Startzeit"
+            return NSLocalizedString("Zum Startzeitpunkt", comment: "At Start Time")
         case .fiveMinutes:
-            return "5 Minuten vorher"
+            return NSLocalizedString("5 Minuten vorher", comment: "5 Minutes Before")
         case .tenMinutes:
-            return "10 Minuten vorher"
+            return NSLocalizedString("10 Minuten vorher", comment: "10 Minutes Before")
         case .fifteenMinutes:
-            return "15 Minuten vorher"
+            return NSLocalizedString("15 Minuten vorher", comment: "15 Minutes Before")
         case .thirtyMinutes:
-            return "30 Minuten vorher"
+            return NSLocalizedString("30 Minuten vorher", comment: "30 Minutes Before")
         case .oneHour:
-            return "1 Stunde vorher"
+            return NSLocalizedString("1 Stunde vorher", comment: "1 Hour Before")
         case .twoHours:
-            return "2 Stunden vorher"
+            return NSLocalizedString("2 Stunden vorher", comment: "2 Hours Before")
         case .oneDay:
-            return "1 Tag vorher"
+            return NSLocalizedString("1 Tag vorher", comment: "1 Day Before")
         case .twoDays:
-            return "2 Tage vorher"
+            return NSLocalizedString("2 Tage vorher", comment: "2 Days Before")
         case .oneWeek:
-            return "1 Woche vorher"
+            return NSLocalizedString("1 Woche vorher", comment: "1 Week Before")
         }
     }
 }
