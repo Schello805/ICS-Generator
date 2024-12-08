@@ -55,7 +55,7 @@ Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdat
 ## Installation
 
 ### App Store
-Die App ist im [App Store](Link zum App Store) verfügbar.
+Die App ist im [App Store](https://apps.apple.com/de/app/ics-generator/id6738963683) verfügbar.
 
 ### Entwicklung
 1. Klonen Sie das Repository
