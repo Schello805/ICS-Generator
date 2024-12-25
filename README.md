@@ -1,133 +1,101 @@
 # ICS Generator iOS App
 
-Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdateien.
-
-![App Screenshot](screenshots/main.png)
+Eine moderne iOS-App zum Erstellen, Importieren und Validieren von ICS-Kalenderdateien.
 
 ## Features
 
-- Umfassendes Termin-Management
-  - Erstellen, Bearbeiten, Löschen und Teilen von Terminen
-  - Intuitive Benutzeroberfläche im nativen iOS-Design
-  - Kontextmenü und Swipe-Aktionen für schnellen Zugriff
-  - Intelligente Gruppierung von Terminen nach Monaten
-  - Fortschrittliche Suchfunktion für Termine
-  - Filter für verschiedene Zeiträume (Alle, Heute, Kommend, Vergangen)
+- **Termine erstellen und verwalten**
+  - Intuitive Benutzeroberfläche für die Terminerstellung
+  - Unterstützung für wiederkehrende Termine
+  - Erinnerungen und Benachrichtigungen
+  - Standortauswahl für Termine
 
-- Erweiterte Termin-Optionen
-  - Wiederholende Termine (täglich, wöchentlich, monatlich, jährlich)
-  - Benutzerdefinierte Wiederholungsregeln
-  - Dateianhänge (PDF-Dokumente und Bilder)
-  - Standort- und URL-Unterstützung
-  - Flexible Erinnerungsoptionen
-  - Unterstützung für ganztägige Termine
-
-- ICS-Datei Validierung
-  - Umfangreiche Validierung von ICS-Dateien
-  - Detaillierte Fehlerberichte
-  - Lösungsvorschläge bei Problemen
-  - Fortschrittsanzeige für große Dateien
-
-- Modernes UI/UX Design
-  - Optimierter Dark Mode mit angepasstem Farbschema
-  - Animierte Übergänge und Interaktionen
-  - Responsive Layout-Anpassungen
-  - Floating Action Button für schnelle Aktionen
-  - Pull-to-Refresh Funktionalität
-  - Übersichtliche Monatsansicht
-
-- Export und Teilen
+- **ICS-Funktionalität**
   - Export von Terminen als ICS-Datei
-  - Teilen via iOS Share Sheet
-  - Unterstützung für Dateianhänge beim Export
-  - Vorschau der ICS-Datei vor dem Export
+  - Import von ICS-Dateien
+  - Validierung von ICS-Dateien nach RFC 5545
+  - Vorschau von ICS-Inhalten
 
-## Technische Details
+- **Benutzerfreundlichkeit**
+  - Modernes SwiftUI Interface
+  - Dark Mode Unterstützung
+  - Anpassbare Standardeinstellungen
+  - Intuitive Navigation
 
-- Entwicklung
-  - Swift & SwiftUI
-  - iOS 15.0+
-  - MVVM Architektur
-  - Lokale Datenpersistierung
-  - Asynchrone Datenverarbeitung
+## Systemanforderungen
 
-- Frameworks und APIs
-  - PhotosUI für Bildauswahl
-  - UniformTypeIdentifiers für Dateihandling
-  - EventKit für Kalenderintegration
-  - SwiftUI Navigation API
-  - Combine für reaktive Programmierung
-
-- Features
-  - Vollständige iCalendar (RFC 5545) Unterstützung
-  - Komplexe Wiederholungsregeln (RRULE)
-  - Dateianhänge in verschiedenen Formaten
-  - Robuste Fehlerbehandlung
-  - Fortschrittliche Suchfunktionen
+- iOS 15.0 oder neuer
+- Xcode 14.0 oder neuer
+- Swift 5.0 oder neuer
 
 ## Installation
 
-### App Store
-Die App ist im [App Store](Link zum App Store) verfügbar.
+1. Klone das Repository:
+```bash
+git clone https://github.com/Schello805/ICS-Generator.git
+```
 
-### Entwicklung
-1. Klonen Sie das Repository
-2. Öffnen Sie `ICS-Generator.xcodeproj` in Xcode
-3. Wählen Sie Ihr Zielgerät oder einen Simulator
-4. Drücken Sie ⌘R zum Ausführen der App
+2. Öffne das Projekt in Xcode:
+```bash
+cd ICS-Generator
+open ICS-Generator.xcodeproj
+```
 
-## Entwicklung
+3. Baue und starte die App in Xcode
 
-Die App verwendet die MVVM (Model-View-ViewModel) Architektur für eine klare Trennung von Logik und UI. 
-Alle UI-Komponenten sind in SwiftUI implementiert und folgen den Apple Human Interface Guidelines.
+## Projektstruktur
 
-### Projektstruktur
-- `Models/`: Datenmodelle für Events und zugehörige Typen
-- `Views/`: SwiftUI Views und UI-Komponenten
-  - `EventEditorView`: Hauptview für die Terminerstellung/-bearbeitung
-  - `ICSValidatorView`: View für die ICS-Datei Validierung
-  - `CustomRecurrenceView`: View für benutzerdefinierte Wiederholungen
-  - Verschiedene Hilfsviews für spezifische Funktionen
-- `ViewModels/`: View Models für die Geschäftslogik
-- `Utilities/`: Hilfsfunktionen und Erweiterungen
-- `Resources/`: Assets und Lokalisierungen
+```
+ICS-Generator/
+├── App/                 # App-Einstiegspunkt
+├── Assets.xcassets/     # App-Assets und Farben
+├── Models/             # Datenmodelle
+├── Resources/          # Ressourcen und Lokalisierungen
+├── Utilities/          # Hilfsfunktionen
+│   ├── Extensions/     # Swift-Erweiterungen
+│   ├── Handlers/       # Error Handler
+│   └── Platform/       # Plattform-spezifischer Code
+├── ViewModels/         # View Models (MVVM)
+└── Views/              # SwiftUI Views
+    ├── Events/         # Event-bezogene Views
+    ├── ICS/            # ICS-Funktionalität
+    ├── Main/           # Haupt-App-Views
+    ├── Settings/       # Einstellungen
+    └── Shared/         # Wiederverwendbare Views
+```
 
-## GitHub Wiki
+## Verwendung
 
-Für weitere Informationen über die Entwicklung des ICS Generators mit KI und Open-Source-Technologien, besuchen Sie bitte unsere [GitHub Wiki Seite](https://github.com/Schello805/ICS-Generator/wiki).
+1. **Termine erstellen**
+   - Tippe auf den Plus-Button
+   - Fülle die Termindetails aus
+   - Speichere den Termin
 
-## Support
+2. **ICS exportieren**
+   - Wähle einen oder mehrere Termine aus
+   - Tippe auf "Exportieren"
+   - Wähle das Ziel für die ICS-Datei
 
-Bei Fragen oder Problemen erstellen Sie bitte ein [Issue](https://github.com/Schello805/ICS-Generator/issues) in diesem Repository.
+3. **ICS importieren**
+   - Gehe zu Einstellungen > ICS importieren
+   - Wähle eine ICS-Datei aus
+   - Bestätige den Import
 
-## Mitwirken
+4. **ICS validieren**
+   - Gehe zu Einstellungen > ICS Validator
+   - Wähle eine ICS-Datei aus
+   - Prüfe die Validierungsergebnisse
 
-Wir freuen uns über jeden Beitrag! Bitte lesen Sie unsere [Contribution Guidelines](CONTRIBUTING.md) für Details.
+## Beitragen
 
-## Datenschutz
-
-Die Datenschutzerklärung finden Sie [hier](PRIVACY.md).
+Wir freuen uns über Beiträge! Bitte lies unsere Beitragsrichtlinien und erstelle einen Pull Request.
 
 ## Lizenz
 
-MIT License
+Dieses Projekt ist unter der MIT-Lizenz lizenziert. Siehe [LICENSE](LICENSE) für Details.
 
-Copyright (c) 2024 Michael Schellenberger
+## Kontakt
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Michael Schellenberger - info@schellenberger.biz
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+Projekt Link: [https://github.com/Schello805/ICS-Generator](https://github.com/Schello805/ICS-Generator)
