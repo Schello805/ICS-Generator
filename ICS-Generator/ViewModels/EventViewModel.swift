@@ -1,9 +1,14 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
+import os.log
 
 class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ICS-Generator", category: "EventViewModel")
+    
     @Published var events: [ICSEvent] = []
+    @Published var errorMessage: String?
+    @Published var showError = false
     
     // UI State
     @Published var selectedEvent: ICSEvent?
@@ -28,10 +33,6 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
     @Published var isSharePresented = false
     @Published var exportFeedback: (show: Bool, success: Bool, message: String) = (false, false, "")
     
-    // Error Handling
-    @Published var currentError: Error?
-    @Published var showingErrorView = false
-    
     private var currentViewController: UIViewController?
     private var tempFiles: [URL] = []
     
@@ -40,113 +41,123 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
         loadEvents()
     }
     
-    private func loadEvents() {
+    public func loadEvents() {
+        logger.info("Loading events from UserDefaults")
         if let data = UserDefaults.standard.data(forKey: "events") {
-            if let decodedEvents = try? JSONDecoder().decode([ICSEvent].self, from: data) {
-                events = decodedEvents
+            do {
+                let decodedEvents = try JSONDecoder().decode([ICSEvent].self, from: data)
+                self.events = decodedEvents
+                logger.info("Successfully loaded \(self.events.count) events")
+            } catch {
+                logger.error("Failed to decode events: \(error.localizedDescription)")
+                handleError(error)
             }
+        } else {
+            logger.info("No events found in UserDefaults")
         }
     }
     
-    private func saveEvents() {
-        if let encodedData = try? JSONEncoder().encode(events) {
+    public func saveEvents() {
+        logger.info("Saving \(self.events.count) events to UserDefaults")
+        do {
+            let encodedData = try JSONEncoder().encode(self.events)
             UserDefaults.standard.set(encodedData, forKey: "events")
+            logger.info("Successfully saved events")
+        } catch {
+            logger.error("Failed to encode events: \(error.localizedDescription)")
+            handleError(error)
         }
     }
     
     func addEvent(_ event: ICSEvent) {
-        events.append(event)
+        logger.info("Adding new event: \(event.title)")
+        self.events.append(event)
         saveEvents()
     }
     
-    func duplicateEvent(_ event: ICSEvent) {
-        let newEvent = event.duplicated()
-        addEvent(newEvent)
-    }
-    
     func updateEvent(_ event: ICSEvent) {
-        if let index = events.firstIndex(where: { $0.id == event.id }) {
-            events[index] = event
+        logger.info("Updating event: \(event.title)")
+        if let index = self.events.firstIndex(where: { $0.id == event.id }) {
+            self.events[index] = event
             saveEvents()
+            logger.info("Successfully updated event")
+        } else {
+            let error = NSError(domain: "EventViewModel", code: 404, userInfo: [
+                NSLocalizedDescriptionKey: "Event nicht gefunden",
+                NSLocalizedFailureReasonErrorKey: "Der zu aktualisierende Termin konnte nicht gefunden werden."
+            ])
+            logger.error("Failed to update event: Event not found with id \(event.id)")
+            handleError(error)
         }
     }
     
     func deleteEvent(_ event: ICSEvent) {
-        events.removeAll { $0.id == event.id }
+        logger.info("Deleting event: \(event.title)")
+        self.events.removeAll { $0.id == event.id }
         saveEvents()
     }
     
     func deleteAllEvents() {
-        events.removeAll()
+        self.events.removeAll()
         saveEvents()
     }
     
     func editEvent(_ event: ICSEvent) {
-        editingEvent = event
-        showingEditSheet = true
+        self.editingEvent = event
+        self.showingEditSheet = true
     }
+    
+    func duplicateEvent(_ event: ICSEvent) {
+        let newEvent = event.duplicated()
+        self.addEvent(newEvent)
+    }
+    
+    // MARK: - Error Handling
     
     private func handleError(_ error: Error) {
         DispatchQueue.main.async {
-            self.currentError = error
-            self.showingErrorView = true
+            self.errorMessage = error.localizedDescription
+            self.showError = true
         }
     }
+    
+    // MARK: - Import
     
     func importICSString(_ icsString: String) {
         guard let event = ICSEvent.from(icsString: icsString) else {
-            handleError(NSError(domain: "ICS Import", code: 0, userInfo: [NSLocalizedDescriptionKey: "Ungültiges ICS-Format"]))
+            let error = NSError(domain: "ICS Import", code: 0, userInfo: [NSLocalizedDescriptionKey: "Ungültiges ICS-Format"])
+            logger.error("Failed to import ICS string: \(error.localizedDescription)")
+            handleError(error)
             return
         }
-        addEvent(event)
+        self.addEvent(event)
     }
     
-    func shareEvent(_ event: ICSEvent) {
-        let icsString = generateICSString(for: [event])
-        Platform.share(items: [icsString]) { [self] success in
-            if success {
-                self.showSuccess()
-            }
-        }
+    // MARK: - Export
+    
+    func exportToString(events: [ICSEvent] = []) -> String {
+        self.generateICSString(for: events.isEmpty ? self.events : events)
     }
     
-    private func showSuccess() {
-        exportFeedback = (true, true, String(localized: "Erfolgreich geteilt"))
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation {
-                self.exportFeedback.show = false
-            }
-        }
-    }
-    
-    private func formatICSDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        return formatter.string(from: date)
-    }
-    
-    // MARK: - Export Functions
-    
-    func exportToString() -> String {
-        generateICSString(for: events)
-    }
-    
-    func exportDirectly() {
-        let icsString = generateICSString(for: events)
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("events.ics")
+    func exportDirectly(events: [ICSEvent] = []) {
+        let eventsToExport = events.isEmpty ? self.events : events
+        let icsString = self.generateICSString(for: eventsToExport)
+        
+        // Erstelle temporäre Datei
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileName = "events.ics"
+        let fileURL = tempDir.appendingPathComponent(fileName)
         
         do {
-            try icsString.write(to: tempURL, atomically: true, encoding: .utf8)
-            let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+            try icsString.write(to: fileURL, atomically: true, encoding: .utf8)
+            self.tempFiles.append(fileURL)
             
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let rootViewController = window.rootViewController {
-                rootViewController.present(activityVC, animated: true)
-            }
+            // Zeige Share Sheet
+            self.shareURL = fileURL
+            self.isSharePresented = true
+            
         } catch {
-            print("Error exporting events: \(error)")
+            logger.error("Failed to export events: \(error.localizedDescription)")
             handleError(error)
         }
     }
@@ -163,9 +174,9 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
         for event in events {
             components.append("BEGIN:VEVENT")
             components.append("UID:\(event.id.uuidString)")
-            components.append("DTSTAMP:\(formatICSDate(Date()))")
-            components.append("DTSTART:\(formatICSDate(event.startDate))")
-            components.append("DTEND:\(formatICSDate(event.endDate))")
+            components.append("DTSTAMP:\(self.formatICSDate(Date()))")
+            components.append("DTSTART:\(self.formatICSDate(event.startDate))")
+            components.append("DTEND:\(self.formatICSDate(event.endDate))")
             components.append("SUMMARY:\(event.title)")
             
             if let location = event.location {
@@ -187,20 +198,21 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
         return components.joined(separator: "\r\n")
     }
     
-    @MainActor
-    func validateICSString(_ icsString: String) -> Bool {
-        guard let _ = ICSEvent.from(icsString: icsString) else {
-            return false
-        }
-        return true
+    // MARK: - Helper Methods
+    
+    private func formatICSDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        return formatter.string(from: date)
     }
     
     private func cleanupTempFiles() {
         let fileManager = FileManager.default
-        tempFiles.forEach { url in
+        self.tempFiles.forEach { url in
             try? fileManager.removeItem(at: url)
         }
-        tempFiles.removeAll()
+        self.tempFiles.removeAll()
     }
     
     private func generateUniqueFileName() -> String {
@@ -212,23 +224,24 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
     
     func showExportOptions() {
         do {
-            let icsString = try generateAndValidateICSString()
-            previewContent = icsString
-            showingExportOptions = true
+            let icsString = try self.generateAndValidateICSString()
+            self.previewContent = icsString
+            self.showingExportOptions = true
         } catch {
+            logger.error("Failed to show export options: \(error.localizedDescription)")
             handleError(error)
         }
     }
     
     func exportWithPreview() {
-        isExporting = true
-        previewContent = generateICSString(for: events)
-        showingPreview = true
-        isExporting = false
+        self.isExporting = true
+        self.previewContent = self.generateICSString(for: self.events)
+        self.showingPreview = true
+        self.isExporting = false
     }
     
     private func showExportFeedback(success: Bool, message: String) {
-        exportFeedback = (show: true, success: success, message: message)
+        self.exportFeedback = (show: true, success: success, message: message)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             self.exportFeedback.show = false
@@ -236,7 +249,7 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
     }
     
     private func generateAndValidateICSString() throws -> String {
-        let icsString = generateICSString(for: events)
+        let icsString = self.generateICSString(for: self.events)
         
         // Validiere den ICS-String
         switch ICSValidator.validate(icsString) {
@@ -248,32 +261,33 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
     }
     
     func confirmExport() {
-        isExporting = true
+        self.isExporting = true
         
         Task {
             do {
-                try await performExport()
-                showFeedback(success: true, message: String(localized: "Export erfolgreich"))
+                try await self.performExport()
+                self.showFeedback(success: true, message: String(localized: "Export erfolgreich"))
             } catch {
+                logger.error("Failed to confirm export: \(error.localizedDescription)")
                 handleError(error)
             }
             
-            isExporting = false
+            self.isExporting = false
         }
     }
     
     private func performExport() async throws {
         // Generiere den Dateinamen
-        let fileName = generateUniqueFileName()
+        let fileName = self.generateUniqueFileName()
         let tempDirectory = FileManager.default.temporaryDirectory
         let icsFileURL = tempDirectory.appendingPathComponent(fileName).appendingPathExtension("ics")
         
         // Schreibe die Datei
         do {
-            try previewContent.write(to: icsFileURL, atomically: true, encoding: .utf8)
-            tempFiles.append(icsFileURL)
-            shareURL = icsFileURL
-            isSharePresented = true
+            try self.previewContent.write(to: icsFileURL, atomically: true, encoding: .utf8)
+            self.tempFiles.append(icsFileURL)
+            self.shareURL = icsFileURL
+            self.isSharePresented = true
         } catch {
             throw error
         }
@@ -292,16 +306,41 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
         }
     }
     
+    // MARK: - Sharing
+    
+    func shareEvent(_ event: ICSEvent) {
+        logger.info("Sharing event: \(event.title)")
+        let icsString = self.generateICSString(for: [event])
+        
+        do {
+            // Erstelle temporäre Datei
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileURL = tempDir.appendingPathComponent("\(event.title).ics")
+            try icsString.write(to: fileURL, atomically: true, encoding: .utf8)
+            self.tempFiles.append(fileURL)
+            
+            // Zeige Share Sheet
+            self.shareURL = fileURL
+            self.isSharePresented = true
+            
+            logger.info("Successfully prepared event for sharing")
+        } catch {
+            logger.error("Failed to share event: \(error.localizedDescription)")
+            handleError(error)
+        }
+    }
+    
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         guard let url = urls.first else { return }
         
         let icsFileURL = url.appendingPathComponent("events").appendingPathExtension("ics")
-        let icsString = generateICSString(for: events)
+        let icsString = self.generateICSString(for: self.events)
         
         do {
             try icsString.write(to: icsFileURL, atomically: true, encoding: .utf8)
-            isExporting = false
+            self.isExporting = false
         } catch {
+            logger.error("Failed to document picker: \(error.localizedDescription)")
             handleError(error)
         }
     }
@@ -311,6 +350,6 @@ class EventViewModel: NSObject, ObservableObject, UIDocumentPickerDelegate {
     }
     
     deinit {
-        cleanupTempFiles()
+        self.cleanupTempFiles()
     }
 }

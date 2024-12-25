@@ -29,9 +29,22 @@
 		756963402CFCACEB009F1937 /* ICS-GeneratorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ICS-GeneratorUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		755CC10C2D1C2CBD00C35C17 /* Exceptions for "ICS-Generator" folder in "ICS-Generator" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 756963252CFCACE8009F1937 /* ICS-Generator */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		756963282CFCACE8009F1937 /* ICS-Generator */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				755CC10C2D1C2CBD00C35C17 /* Exceptions for "ICS-Generator" folder in "ICS-Generator" target */,
+			);
 			path = "ICS-Generator";
 			sourceTree = "<group>";
 		};
@@ -402,6 +415,7 @@
 				DEVELOPMENT_TEAM = 9MWLM5L82G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ICS-Generator/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "ICS Generator";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -433,6 +447,7 @@
 				DEVELOPMENT_TEAM = 9MWLM5L82G;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ICS-Generator/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "ICS Generator";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

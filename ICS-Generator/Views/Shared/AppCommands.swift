@@ -2,46 +2,57 @@ import SwiftUI
 
 struct AppCommands: Commands {
     @ObservedObject var viewModel: EventViewModel
+    @Binding var selectedEvent: ICSEvent?
     
     var body: some Commands {
         CommandGroup(after: .newItem) {
-            Button("Neuer Termin") {
+            Button("Termin erstellen") {
                 viewModel.showingNewEventSheet = true
             }
             .keyboardShortcut("n", modifiers: .command)
             
-            Button("Termin bearbeiten") {
-                if let selectedEvent = viewModel.selectedEvent {
-                    viewModel.editEvent(selectedEvent)
+            if let event = selectedEvent {
+                Divider()
+                
+                Button("Termin bearbeiten") {
+                    viewModel.editEvent(event)
                 }
+                .keyboardShortcut("e", modifiers: .command)
+                
+                Button("Termin duplizieren") {
+                    viewModel.duplicateEvent(event)
+                }
+                .keyboardShortcut("d", modifiers: .command)
+                
+                Button("Termin teilen") {
+                    viewModel.shareEvent(event)
+                }
+                .keyboardShortcut("s", modifiers: .command)
+                
+                Button("Termin löschen", role: .destructive) {
+                    viewModel.deleteEvent(event)
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
             }
-            .keyboardShortcut("e", modifiers: .command)
-            .disabled(viewModel.selectedEvent == nil)
         }
         
-        CommandGroup(after: .pasteboard) {
-            Button("Als ICS kopieren") {
-                if let selectedEvent = viewModel.selectedEvent {
-                    Platform.copyToClipboard(selectedEvent.toICSString())
-                }
+        CommandGroup(after: .importExport) {
+            Button("Alle Termine exportieren") {
+                viewModel.showExportOptions()
             }
-            .keyboardShortcut("c", modifiers: [.command, .option])
-            .disabled(viewModel.selectedEvent == nil)
+            .keyboardShortcut("e", modifiers: [.command, .shift])
             
-            Button("Teilen") {
-                if let selectedEvent = viewModel.selectedEvent {
-                    viewModel.shareEvent(selectedEvent)
-                }
+            Button("ICS-Datei importieren") {
+                viewModel.showingImportSheet = true
             }
-            .keyboardShortcut("s", modifiers: [.command, .shift])
-            .disabled(viewModel.selectedEvent == nil)
+            .keyboardShortcut("i", modifiers: [.command, .shift])
         }
         
         CommandGroup(after: .toolbar) {
-            Button("Einstellungen") {
-                viewModel.showingSettings = true
+            Button("ICS-Validator") {
+                viewModel.showingValidatorSheet = true
             }
-            .keyboardShortcut(",", modifiers: .command)
+            .keyboardShortcut("v", modifiers: [.command, .shift])
         }
     }
 }

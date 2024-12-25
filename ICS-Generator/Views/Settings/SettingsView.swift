@@ -49,7 +49,7 @@ struct SettingsView: View {
             
             Section {
                 NavigationLink {
-                    Text("Über die App")
+                    AboutView()
                 } label: {
                     Label("Über", systemImage: "info.circle")
                 }
@@ -78,9 +78,6 @@ struct SettingsView: View {
             }
             
             Section {
-                Label("Version 1.0.0", systemImage: "doc.text")
-                    .foregroundColor(.secondary)
-            } footer: {
                 Text(" 2024 Michael Schellenberger")
                     .font(.footnote)
                     .foregroundColor(.secondary)

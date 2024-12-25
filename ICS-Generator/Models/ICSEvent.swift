@@ -15,6 +15,10 @@ struct ICSEvent: Identifiable, Codable, Hashable {
     var customRecurrence: CustomRecurrence?
     var attachments: [Attachment]
     
+    var isValid: Bool {
+        !title.isEmpty && endDate >= startDate
+    }
+    
     init(id: UUID = UUID(), 
          title: String, 
          startDate: Date, 

@@ -2,6 +2,10 @@
 
 Eine moderne iOS-App zum Erstellen, Importieren und Validieren von ICS-Kalenderdateien.
 
+![Start](https://github.com/user-attachments/assets/f23244a0-e8a4-4f1f-a9f3-21623b40e9e8)
+![Settings](https://github.com/user-attachments/assets/20876f4a-3a71-499d-b7d9-1afb2eff217e)
+![ICS Validator](https://github.com/user-attachments/assets/4ac67454-f6ab-49fb-b6ea-9ce069f8ce7f)
+
 ## Features
 
 - **Termine erstellen und verwalten**
@@ -30,10 +34,15 @@ Eine moderne iOS-App zum Erstellen, Importieren und Validieren von ICS-Kalenderd
 
 ## Installation
 
+<<<<<<< HEAD
 1. Klone das Repository:
 ```bash
 git clone https://github.com/Schello805/ICS-Generator.git
 ```
+=======
+### App Store
+Die App ist im [App Store](https://apps.apple.com/de/app/ics-generator/id6738963683) verfügbar.
+>>>>>>> 1b95d17c98aaa0a877ce255e9bd10516ab48d3e7
 
 2. Öffne das Projekt in Xcode:
 ```bash
