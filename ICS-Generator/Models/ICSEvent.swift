@@ -314,6 +314,24 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         return dateFormatter.date(from: dateString)
     }
     
+    func duplicated() -> ICSEvent {
+        ICSEvent(
+            id: UUID(),
+            title: "Kopie von " + self.title,
+            startDate: self.startDate,
+            endDate: self.endDate,
+            isAllDay: self.isAllDay,
+            location: self.location,
+            notes: self.notes,
+            url: self.url,
+            travelTime: self.travelTime,
+            alert: self.alert,
+            recurrence: self.recurrence,
+            customRecurrence: self.customRecurrence,
+            attachments: self.attachments
+        )
+    }
+    
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

@@ -62,17 +62,17 @@ struct EventEditorView: View {
                     selectedItem: $selectedItem
                 )
             }
-            .navigationTitle(event == nil ? NSLocalizedString("Neuer Termin", comment: "New event title") : NSLocalizedString("Termin bearbeiten", comment: "Edit event title"))
+            .navigationTitle(event == nil ? String(localized: "Neuer Termin") : String(localized: "Termin bearbeiten"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(NSLocalizedString("Abbrechen", comment: "Cancel button")) {
+                    Button(String(localized: "Abbrechen")) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(NSLocalizedString("Speichern", comment: "Save button")) {
+                    Button(String(localized: "Speichern")) {
                         saveEvent()
                     }
                     .disabled(!isValid)
@@ -132,7 +132,7 @@ struct TitleSection: View {
     
     var body: some View {
         Section {
-            TextField(NSLocalizedString("Titel", comment: "Event title field"), text: $title)
+            TextField(String(localized: "Titel"), text: $title)
                 .textInputAutocapitalization(.words)
         }
     }
@@ -148,18 +148,18 @@ struct LocationSection: View {
     
     var body: some View {
         Section {
-            TextField(NSLocalizedString("Ort", comment: "Event location field"), text: $location)
+            TextField(String(localized: "Ort"), text: $location)
                 .textInputAutocapitalization(.words)
             
             if !location.isEmpty {
-                Picker(NSLocalizedString("Reisezeit", comment: "Travel time picker"), selection: $selectedTravelTimeOption) {
-                    Text(NSLocalizedString("Keine", comment: "No travel time")).tag(0)
-                    Text(NSLocalizedString("5 Minuten", comment: "5 minutes travel time")).tag(5)
-                    Text(NSLocalizedString("15 Minuten", comment: "15 minutes travel time")).tag(15)
-                    Text(NSLocalizedString("30 Minuten", comment: "30 minutes travel time")).tag(30)
-                    Text(NSLocalizedString("1 Stunde", comment: "1 hour travel time")).tag(60)
-                    Text(NSLocalizedString("2 Stunden", comment: "2 hours travel time")).tag(120)
-                    Text(NSLocalizedString("Benutzerdefiniert", comment: "Custom travel time")).tag(-1)
+                Picker(String(localized: "Reisezeit"), selection: $selectedTravelTimeOption) {
+                    Text(String(localized: "Keine")).tag(0)
+                    Text(String(localized: "5 Minuten")).tag(5)
+                    Text(String(localized: "15 Minuten")).tag(15)
+                    Text(String(localized: "30 Minuten")).tag(30)
+                    Text(String(localized: "1 Stunde")).tag(60)
+                    Text(String(localized: "2 Stunden")).tag(120)
+                    Text(String(localized: "Benutzerdefiniert")).tag(-1)
                 }
                 .onChange(of: selectedTravelTimeOption) { _, newValue in
                     if newValue == -1 {
@@ -172,7 +172,7 @@ struct LocationSection: View {
                 
                 if showingCustomTravelTime {
                     HStack {
-                        TextField(NSLocalizedString("Minuten", comment: "Custom travel time in minutes"), text: $customTravelTime)
+                        TextField(String(localized: "Minuten"), text: $customTravelTime)
                             .keyboardType(.numberPad)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .onChange(of: customTravelTime) { _, newValue in
@@ -180,12 +180,12 @@ struct LocationSection: View {
                                     travelTime = minutes
                                 }
                             }
-                        Text(NSLocalizedString("Minuten", comment: "Minutes"))
+                        Text(String(localized: "Minuten"))
                     }
                 }
             }
             
-            TextField(NSLocalizedString("URL", comment: "Event URL field"), text: $url)
+            TextField(String(localized: "URL"), text: $url)
                 .textInputAutocapitalization(.never)
                 .keyboardType(.URL)
         }
@@ -213,7 +213,7 @@ struct NotesSection: View {
     
     var body: some View {
         Section {
-            TextField(NSLocalizedString("Notizen", comment: "Event notes field"), text: $notes, axis: .vertical)
+            TextField(String(localized: "Notizen"), text: $notes, axis: .vertical)
                 .textInputAutocapitalization(.sentences)
                 .lineLimit(5...10)
         }
@@ -225,16 +225,16 @@ struct AlertSection: View {
     
     var body: some View {
         Section {
-            Picker(NSLocalizedString("Erinnerung", comment: "Alert time picker"), selection: $alert) {
-                Text(NSLocalizedString("Keine", comment: "No alert")).tag(ICSEvent.AlertTime.none)
-                Text(NSLocalizedString("5 Minuten", comment: "5 minutes alert")).tag(ICSEvent.AlertTime.fiveMinutes)
-                Text(NSLocalizedString("15 Minuten", comment: "15 minutes alert")).tag(ICSEvent.AlertTime.fifteenMinutes)
-                Text(NSLocalizedString("30 Minuten", comment: "30 minutes alert")).tag(ICSEvent.AlertTime.thirtyMinutes)
-                Text(NSLocalizedString("1 Stunde", comment: "1 hour alert")).tag(ICSEvent.AlertTime.oneHour)
-                Text(NSLocalizedString("2 Stunden", comment: "2 hours alert")).tag(ICSEvent.AlertTime.twoHours)
-                Text(NSLocalizedString("1 Tag", comment: "1 day alert")).tag(ICSEvent.AlertTime.oneDay)
-                Text(NSLocalizedString("2 Tage", comment: "2 days alert")).tag(ICSEvent.AlertTime.twoDays)
-                Text(NSLocalizedString("1 Woche", comment: "1 week alert")).tag(ICSEvent.AlertTime.oneWeek)
+            Picker(String(localized: "Erinnerung"), selection: $alert) {
+                Text(String(localized: "Keine")).tag(ICSEvent.AlertTime.none)
+                Text(String(localized: "5 Minuten")).tag(ICSEvent.AlertTime.fiveMinutes)
+                Text(String(localized: "15 Minuten")).tag(ICSEvent.AlertTime.fifteenMinutes)
+                Text(String(localized: "30 Minuten")).tag(ICSEvent.AlertTime.thirtyMinutes)
+                Text(String(localized: "1 Stunde")).tag(ICSEvent.AlertTime.oneHour)
+                Text(String(localized: "2 Stunden")).tag(ICSEvent.AlertTime.twoHours)
+                Text(String(localized: "1 Tag")).tag(ICSEvent.AlertTime.oneDay)
+                Text(String(localized: "2 Tage")).tag(ICSEvent.AlertTime.twoDays)
+                Text(String(localized: "1 Woche")).tag(ICSEvent.AlertTime.oneWeek)
             }
         }
     }
@@ -249,28 +249,28 @@ struct RecurrenceSection: View {
     
     var body: some View {
         Section {
-            Picker(NSLocalizedString("Wiederholung", comment: "Recurrence rule picker"), selection: $recurrence) {
-                Text(NSLocalizedString("Keine", comment: "No recurrence")).tag(ICSEvent.RecurrenceRule.none)
-                Text(NSLocalizedString("Täglich", comment: "Daily recurrence")).tag(ICSEvent.RecurrenceRule.daily)
-                Text(NSLocalizedString("Wöchentlich", comment: "Weekly recurrence")).tag(ICSEvent.RecurrenceRule.weekly)
-                Text(NSLocalizedString("Monatlich", comment: "Monthly recurrence")).tag(ICSEvent.RecurrenceRule.monthly)
-                Text(NSLocalizedString("Jährlich", comment: "Yearly recurrence")).tag(ICSEvent.RecurrenceRule.yearly)
-                Text(NSLocalizedString("Benutzerdefiniert", comment: "Custom recurrence")).tag(ICSEvent.RecurrenceRule.custom)
+            Picker(String(localized: "Wiederholung"), selection: $recurrence) {
+                Text(String(localized: "Keine")).tag(ICSEvent.RecurrenceRule.none)
+                Text(String(localized: "Täglich")).tag(ICSEvent.RecurrenceRule.daily)
+                Text(String(localized: "Wöchentlich")).tag(ICSEvent.RecurrenceRule.weekly)
+                Text(String(localized: "Monatlich")).tag(ICSEvent.RecurrenceRule.monthly)
+                Text(String(localized: "Jährlich")).tag(ICSEvent.RecurrenceRule.yearly)
+                Text(String(localized: "Benutzerdefiniert")).tag(ICSEvent.RecurrenceRule.custom)
             }
             
             if recurrence != .none {
-                Stepper(NSLocalizedString("Alle \(interval) \(intervalLabel)", comment: "Recurrence interval stepper"), value: $interval, in: 1...99)
+                Stepper("\(String(localized: "Alle")) \(interval) \(intervalLabel)", value: $interval, in: 1...99)
                 
-                Picker(NSLocalizedString("Endet", comment: "Recurrence end picker"), selection: .init(
-                    get: { endDate == nil ? false : true },
+                Picker(String(localized: "Endet"), selection: Binding<Bool>(
+                    get: { endDate != nil },
                     set: { if !$0 { endDate = nil } }
                 )) {
-                    Text(NSLocalizedString("Nie", comment: "No end date")).tag(false)
-                    Text(NSLocalizedString("Am", comment: "End date")).tag(true)
+                    Text(String(localized: "Nie")).tag(false)
+                    Text(String(localized: "Am")).tag(true)
                 }
                 
                 if endDate != nil {
-                    DatePicker(NSLocalizedString("", comment: ""), selection: .init(
+                    DatePicker("", selection: .init(
                         get: { endDate ?? Date() },
                         set: { endDate = $0 }
                     ), displayedComponents: [.date])
@@ -278,7 +278,7 @@ struct RecurrenceSection: View {
             }
             
             if recurrence == .custom {
-                NavigationLink(NSLocalizedString("Benutzerdefinierte Wiederholung", comment: "Custom recurrence link")) {
+                NavigationLink(String(localized: "Benutzerdefinierte Wiederholung")) {
                     CustomRecurrenceView(recurrence: $recurrence, customRecurrence: $customRecurrence)
                 }
             }
@@ -287,10 +287,10 @@ struct RecurrenceSection: View {
     
     private var intervalLabel: String {
         switch recurrence {
-        case .daily: return interval == 1 ? NSLocalizedString("Tag", comment: "Day") : NSLocalizedString("Tage", comment: "Days")
-        case .weekly: return interval == 1 ? NSLocalizedString("Woche", comment: "Week") : NSLocalizedString("Wochen", comment: "Weeks")
-        case .monthly: return interval == 1 ? NSLocalizedString("Monat", comment: "Month") : NSLocalizedString("Monate", comment: "Months")
-        case .yearly: return interval == 1 ? NSLocalizedString("Jahr", comment: "Year") : NSLocalizedString("Jahre", comment: "Years")
+        case .daily: return interval == 1 ? String(localized: "Tag") : String(localized: "Tage")
+        case .weekly: return interval == 1 ? String(localized: "Woche") : String(localized: "Wochen")
+        case .monthly: return interval == 1 ? String(localized: "Monat") : String(localized: "Monate")
+        case .yearly: return interval == 1 ? String(localized: "Jahr") : String(localized: "Jahre")
         default: return ""
         }
     }
@@ -319,17 +319,17 @@ struct AttachmentsSection: View {
                 Button {
                     showingImagePicker = true
                 } label: {
-                    Label(NSLocalizedString("Fotos", comment: "Photos"), systemImage: "photo")
+                    Label(String(localized: "Fotos"), systemImage: "photo")
                 }
                 
                 Button {
                     showingFilePicker = true
                 } label: {
-                    Label(NSLocalizedString("Dokumente", comment: "Documents"), systemImage: "doc")
+                    Label(String(localized: "Dokumente"), systemImage: "doc")
                 }
             } label: {
                 HStack {
-                    Text(NSLocalizedString("Anhang hinzufügen", comment: "Add attachment"))
+                    Text(String(localized: "Anhang hinzufügen"))
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down")
                         .imageScale(.small)
@@ -375,9 +375,9 @@ struct DateTimeSection: View {
     @State private var hasInitialized = false
     
     var body: some View {
-        Section(header: Text(NSLocalizedString("Datum & Zeit", comment: "Date & Time section"))) {
+        Section(header: Text(String(localized: "Datum & Zeit"))) {
             DatePicker(
-                NSLocalizedString("Start", comment: "Start date"),
+                String(localized: "Start"),
                 selection: $startDate,
                 displayedComponents: isAllDay ? .date : [.date, .hourAndMinute]
             )
@@ -399,14 +399,14 @@ struct DateTimeSection: View {
             
             if !isAllDay {
                 DatePicker(
-                    NSLocalizedString("Ende", comment: "End date"),
+                    String(localized: "Ende"),
                     selection: $endDate,
                     in: startDate...,
                     displayedComponents: [.date, .hourAndMinute]
                 )
             }
             
-            Toggle(NSLocalizedString("Ganztägig", comment: "All day toggle"), isOn: $isAllDay)
+            Toggle(String(localized: "Ganztägig"), isOn: $isAllDay)
                 .onChange(of: isAllDay) { _, newValue in
                     Task { @MainActor in
                         let calendar = Calendar.current

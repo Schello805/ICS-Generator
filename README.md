@@ -2,7 +2,7 @@
 
 Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdateien.
 
-
+![App Screenshot](screenshots/main.png)
 
 ## Features
 
@@ -10,25 +10,37 @@ Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdat
   - Erstellen, Bearbeiten, Löschen und Teilen von Terminen
   - Intuitive Benutzeroberfläche im nativen iOS-Design
   - Kontextmenü und Swipe-Aktionen für schnellen Zugriff
-  - Gruppierung von Terminen nach Zeiträumen (Heute, Morgen, Diese Woche, etc.)
+  - Intelligente Gruppierung von Terminen nach Monaten
+  - Fortschrittliche Suchfunktion für Termine
+  - Filter für verschiedene Zeiträume (Alle, Heute, Kommend, Vergangen)
 
 - Erweiterte Termin-Optionen
   - Wiederholende Termine (täglich, wöchentlich, monatlich, jährlich)
   - Benutzerdefinierte Wiederholungsregeln
   - Dateianhänge (PDF-Dokumente und Bilder)
   - Standort- und URL-Unterstützung
-  - Erinnerungen und Reisezeit
+  - Flexible Erinnerungsoptionen
+  - Unterstützung für ganztägige Termine
+
+- ICS-Datei Validierung
+  - Umfangreiche Validierung von ICS-Dateien
+  - Detaillierte Fehlerberichte
+  - Lösungsvorschläge bei Problemen
+  - Fortschrittsanzeige für große Dateien
+
+- Modernes UI/UX Design
+  - Optimierter Dark Mode mit angepasstem Farbschema
+  - Animierte Übergänge und Interaktionen
+  - Responsive Layout-Anpassungen
+  - Floating Action Button für schnelle Aktionen
+  - Pull-to-Refresh Funktionalität
+  - Übersichtliche Monatsansicht
 
 - Export und Teilen
   - Export von Terminen als ICS-Datei
   - Teilen via iOS Share Sheet
   - Unterstützung für Dateianhänge beim Export
-
-- Benutzerfreundlichkeit
-  - Unterstützung für Dark Mode
-  - Native iOS Gesten
-  - Aussagekräftige Fehlerbehandlung
-  - Benutzerfreundliche Dialoge und Feedback
+  - Vorschau der ICS-Datei vor dem Export
 
 ## Technische Details
 
@@ -37,18 +49,21 @@ Eine moderne iOS-App zur einfachen Erstellung und Verwaltung von ICS-Kalenderdat
   - iOS 15.0+
   - MVVM Architektur
   - Lokale Datenpersistierung
+  - Asynchrone Datenverarbeitung
 
 - Frameworks und APIs
   - PhotosUI für Bildauswahl
   - UniformTypeIdentifiers für Dateihandling
   - EventKit für Kalenderintegration
   - SwiftUI Navigation API
+  - Combine für reaktive Programmierung
 
 - Features
   - Vollständige iCalendar (RFC 5545) Unterstützung
   - Komplexe Wiederholungsregeln (RRULE)
   - Dateianhänge in verschiedenen Formaten
   - Robuste Fehlerbehandlung
+  - Fortschrittliche Suchfunktionen
 
 ## Installation
 
@@ -70,10 +85,12 @@ Alle UI-Komponenten sind in SwiftUI implementiert und folgen den Apple Human Int
 - `Models/`: Datenmodelle für Events und zugehörige Typen
 - `Views/`: SwiftUI Views und UI-Komponenten
   - `EventEditorView`: Hauptview für die Terminerstellung/-bearbeitung
+  - `ICSValidatorView`: View für die ICS-Datei Validierung
   - `CustomRecurrenceView`: View für benutzerdefinierte Wiederholungen
   - Verschiedene Hilfsviews für spezifische Funktionen
 - `ViewModels/`: View Models für die Geschäftslogik
 - `Utilities/`: Hilfsfunktionen und Erweiterungen
+- `Resources/`: Assets und Lokalisierungen
 
 ## GitHub Wiki
 

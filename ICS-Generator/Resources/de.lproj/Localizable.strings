@@ -116,6 +116,13 @@
 "Privacy Policy" = "Datenschutzerklärung";
 "Terms of Use" = "Nutzungsbedingungen";
 
+// Language Settings
+"Sprache" = "Sprache";
+"System" = "System";
+"Sprache ändern" = "Sprache ändern";
+"Die App muss neu gestartet werden, um die Sprachänderung zu übernehmen." = "Die App muss neu gestartet werden, um die Sprachänderung zu übernehmen.";
+"OK" = "OK";
+
 // Reminders
 "None" = "Keine";
 "At Start Time" = "Zur Startzeit";
