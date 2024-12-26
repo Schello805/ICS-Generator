@@ -36,7 +36,14 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
-            .environmentObject(EventViewModel())
+        let mockViewModel = EventViewModel()
+        // Add some test events
+        mockViewModel.events = [
+            ICSEvent(title: "Test Event 1", startDate: Date(), endDate: Date().addingTimeInterval(3600)),
+            ICSEvent(title: "Test Event 2", startDate: Date().addingTimeInterval(7200), endDate: Date().addingTimeInterval(10800))
+        ]
+        
+        return ContentView()
+            .environmentObject(mockViewModel)
     }
 }

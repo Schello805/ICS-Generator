@@ -2,29 +2,26 @@
 
 Eine moderne iOS-App zum Erstellen, Importieren und Validieren von ICS-Kalenderdateien.
 
-![Start](https://github.com/user-attachments/assets/f23244a0-e8a4-4f1f-a9f3-21623b40e9e8)
-![Settings](https://github.com/user-attachments/assets/20876f4a-3a71-499d-b7d9-1afb2eff217e)
-![ICS Validator](https://github.com/user-attachments/assets/4ac67454-f6ab-49fb-b6ea-9ce069f8ce7f)
-
 ## Features
 
 - **Termine erstellen und verwalten**
   - Intuitive Benutzeroberfläche für die Terminerstellung
-  - Unterstützung für wiederkehrende Termine
-  - Erinnerungen und Benachrichtigungen
+  - Unterstützung für Ganztages-Termine
   - Standortauswahl für Termine
+  - Notizen und URL-Unterstützung
 
 - **ICS-Funktionalität**
-  - Export von Terminen als ICS-Datei
-  - Import von ICS-Dateien
+  - Zuverlässiger Export von Terminen als ICS-Datei
   - Validierung von ICS-Dateien nach RFC 5545
   - Vorschau von ICS-Inhalten
+  - Einfaches Teilen über das System-Share-Sheet
 
 - **Benutzerfreundlichkeit**
   - Modernes SwiftUI Interface
   - Dark Mode Unterstützung
-  - Anpassbare Standardeinstellungen
-  - Intuitive Navigation
+  - Anpassbare Export-Einstellungen
+  - Intuitive Navigation und Suche
+  - Gruppierung nach Monaten
 
 ## Systemanforderungen
 
@@ -34,15 +31,14 @@ Eine moderne iOS-App zum Erstellen, Importieren und Validieren von ICS-Kalenderd
 
 ## Installation
 
-<<<<<<< HEAD
+### App Store
+Die App ist im [App Store](https://apps.apple.com/de/app/ics-generator/id6738963683) verfügbar.
+
+### Entwicklung
 1. Klone das Repository:
 ```bash
 git clone https://github.com/Schello805/ICS-Generator.git
 ```
-=======
-### App Store
-Die App ist im [App Store](https://apps.apple.com/de/app/ics-generator/id6738963683) verfügbar.
->>>>>>> 1b95d17c98aaa0a877ce255e9bd10516ab48d3e7
 
 2. Öffne das Projekt in Xcode:
 ```bash
@@ -77,23 +73,32 @@ ICS-Generator/
 
 1. **Termine erstellen**
    - Tippe auf den Plus-Button
-   - Fülle die Termindetails aus
+   - Fülle die Termindetails aus (Titel, Datum, Zeit)
+   - Optional: Füge Standort, Notizen oder URL hinzu
    - Speichere den Termin
 
 2. **ICS exportieren**
    - Wähle einen oder mehrere Termine aus
-   - Tippe auf "Exportieren"
-   - Wähle das Ziel für die ICS-Datei
+   - Tippe auf den "Teilen"-Button
+   - Wähle zwischen Vorschau oder direktem Teilen
+   - Nutze das System-Share-Sheet zum Teilen der ICS-Datei
 
-3. **ICS importieren**
-   - Gehe zu Einstellungen > ICS importieren
-   - Wähle eine ICS-Datei aus
-   - Bestätige den Import
+3. **Termine suchen**
+   - Nutze die Suchleiste am oberen Bildschirmrand
+   - Filtere nach Titel oder Datum
+   - Termine werden nach Monaten gruppiert angezeigt
 
-4. **ICS validieren**
-   - Gehe zu Einstellungen > ICS Validator
-   - Wähle eine ICS-Datei aus
-   - Prüfe die Validierungsergebnisse
+4. **Termine verwalten**
+   - Lange auf einen Termin tippen für Kontextmenü
+   - Bearbeiten oder Löschen von Terminen
+   - Direktes Teilen einzelner Termine
+
+## Letzte Änderungen
+
+- Verbesserte ICS-Export-Funktionalität
+- Optimierte Datei-Sharing-Funktion
+- Erweiterte Fehlerbehandlung
+- Verbesserte Benutzerführung
 
 ## Beitragen
 

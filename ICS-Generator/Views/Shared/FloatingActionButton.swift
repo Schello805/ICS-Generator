@@ -2,6 +2,12 @@ import SwiftUI
 
 struct FloatingActionButton: View {
     let action: () -> Void
+    let systemImage: String
+    
+    init(systemImage: String = "plus", action: @escaping () -> Void) {
+        self.systemImage = systemImage
+        self.action = action
+    }
     
     var body: some View {
         VStack {
@@ -9,7 +15,7 @@ struct FloatingActionButton: View {
             HStack {
                 Spacer()
                 Button(action: action) {
-                    Image(systemName: "plus")
+                    Image(systemName: systemImage)
                         .font(.title2)
                         .foregroundColor(.white)
                         .frame(width: 60, height: 60)
@@ -21,5 +27,11 @@ struct FloatingActionButton: View {
                 .transition(.scale)
             }
         }
+    }
+}
+
+struct FloatingActionButton_Previews: PreviewProvider {
+    static var previews: some View {
+        FloatingActionButton(systemImage: "plus.circle.fill") {}
     }
 }

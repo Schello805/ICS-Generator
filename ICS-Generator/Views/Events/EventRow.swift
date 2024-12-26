@@ -36,12 +36,6 @@ struct EventRow: View {
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 
-                if event.recurrence != .none {
-                    Image(systemName: "repeat")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                
                 if showCopiedFeedback {
                     Text("Kopiert!")
                         .font(.caption)

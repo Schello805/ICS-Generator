@@ -99,15 +99,7 @@ struct CustomRecurrenceView: View {
     }
     
     private var endDateToggle: some View {
-        Toggle(String(localized: "Enddatum"), isOn: Binding(
-            get: { showingEndDatePicker },
-            set: { isOn in
-                showingEndDatePicker = isOn
-                if !isOn {
-                    endDate = nil
-                }
-            }
-        ))
+        Toggle(String(localized: "Enddatum festlegen"), isOn: $showingEndDatePicker)
     }
     
     private var endDatePicker: some View {
@@ -122,23 +114,20 @@ struct CustomRecurrenceView: View {
     }
     
     private var repeatCountField: some View {
-        HStack {
-            Text(String(localized: "Anzahl Wiederholungen"))
-            Spacer()
-            TextField(String(localized: "Anzahl"), value: $count, format: .number)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-        }
+        Stepper("\(String(localized: "Anzahl Wiederholungen")): \(count)", value: $count, in: 1...99)
     }
     
     private func saveCustomRecurrence() {
+        let weekDaysSet = frequency == .weekly && !selectedWeekDays.isEmpty ? selectedWeekDays : nil
+        
         let newCustomRecurrence = ICSEvent.CustomRecurrence(
             frequency: frequency,
             interval: interval,
             count: showingEndDatePicker ? nil : count,
-            until: endDate,
-            weekDays: frequency == .weekly ? selectedWeekDays : nil
+            until: showingEndDatePicker ? endDate : nil,
+            weekDays: weekDaysSet
         )
+        
         customRecurrence = newCustomRecurrence
         recurrence = .custom
     }

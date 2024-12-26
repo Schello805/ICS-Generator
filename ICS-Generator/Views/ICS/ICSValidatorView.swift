@@ -32,129 +32,109 @@ struct ICSValidatorView: View {
     @State private var currentOperation: String = ""
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("ICS Validator")
-                            .font(.title)
-                            .bold()
-                            .foregroundColor(CustomColors.text)
-                        Text("Überprüfen Sie Ihre ICS-Datei auf Standardkonformität")
-                            .font(.subheadline)
-                            .foregroundColor(CustomColors.secondaryText)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    
-                    if showInfo {
-                        InfoView()
-                            .transition(.opacity)
-                    }
-                    
-                    // Dateiauswahl
-                    VStack(spacing: 12) {
-                        if let selectedFile = selectedFile {
-                            HStack {
-                                Image(systemName: "doc.fill")
-                                    .foregroundColor(CustomColors.accent)
-                                Text(selectedFile.lastPathComponent)
-                                    .lineLimit(1)
-                                    .foregroundColor(CustomColors.text)
-                                Spacer()
-                                Button(action: { self.selectedFile = nil }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(CustomColors.secondaryText)
-                                }
+        ScrollView {
+            VStack(spacing: 20) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("ICS Validator")
+                        .font(.title)
+                        .bold()
+                        .foregroundColor(CustomColors.text)
+                    Text("Überprüfen Sie Ihre ICS-Datei auf Standardkonformität")
+                        .font(.subheadline)
+                        .foregroundColor(CustomColors.secondaryText)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                
+                if !validationResults.isEmpty {
+                    // Validierungsergebnisse
+                    VStack(alignment: .leading, spacing: 20) {
+                        ValidationSummaryView(results: validationResults)
+                            .padding(.bottom)
+                        
+                        ForEach(ValidationCategory.allCases, id: \.self) { category in
+                            let categoryResults = validationResults.filter { $0.category == category }
+                            if !categoryResults.isEmpty {
+                                ValidationCategoryView(category: category, results: categoryResults)
                             }
+                        }
+                    }
+                    .padding()
+                } else {
+                    // File Selection Area
+                    VStack(spacing: 16) {
+                        if isValidating {
+                            ProgressView(value: progress) {
+                                Text(currentOperation)
+                                    .font(.caption)
+                                    .foregroundColor(CustomColors.secondaryText)
+                            }
+                            .progressViewStyle(LinearProgressViewStyle())
                             .padding()
-                            .background(CustomColors.secondaryBackground)
-                            .cornerRadius(10)
                         } else {
                             Button(action: { showFilePicker = true }) {
-                                HStack {
+                                VStack(spacing: 12) {
                                     Image(systemName: "doc.badge.plus")
-                                        .font(.title2)
+                                        .font(.system(size: 40))
                                     Text("ICS-Datei auswählen")
                                         .font(.headline)
                                 }
+                                .foregroundColor(CustomColors.accent)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(CustomColors.accent)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
+                                .background(CustomColors.secondaryBackground)
+                                .cornerRadius(12)
                             }
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    if isValidating {
-                        VStack(spacing: 16) {
-                            ProgressView(currentOperation)
-                                .progressViewStyle(CircularProgressViewStyle(tint: CustomColors.accent))
+                            .buttonStyle(PlainButtonStyle())
                             
-                            // Fortschrittsbalken
-                            GeometryReader { geometry in
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .fill(CustomColors.secondaryBackground)
-                                        .frame(height: 8)
-                                        .cornerRadius(4)
-                                    
-                                    Rectangle()
-                                        .fill(CustomColors.accent)
-                                        .frame(width: geometry.size.width * CGFloat(progress), height: 8)
-                                        .cornerRadius(4)
-                                }
-                            }
-                            .frame(height: 8)
-                            
-                            Text("\(Int(progress * 100))%")
+                            Text("Wählen Sie eine ICS-Datei aus, um sie zu validieren")
                                 .font(.caption)
                                 .foregroundColor(CustomColors.secondaryText)
+                                .multilineTextAlignment(.center)
                         }
-                        .padding()
-                    } else if !validationResults.isEmpty {
-                        // Validierungsergebnisse
-                        VStack(alignment: .leading, spacing: 20) {
-                            ValidationSummaryView(results: validationResults)
-                                .padding(.bottom)
-                            
-                            ForEach(ValidationCategory.allCases, id: \.self) { category in
-                                let categoryResults = validationResults.filter { $0.category == category }
-                                if !categoryResults.isEmpty {
-                                    ValidationCategoryView(category: category, results: categoryResults)
-                                }
-                            }
-                        }
-                        .padding()
                     }
-                    
-                    if let error = errorMessage {
-                        Text(error)
-                            .foregroundColor(CustomColors.error)
-                            .padding()
-                    }
+                    .padding()
+                }
+                
+                if showInfo {
+                    InfoView()
+                        .padding()
                 }
             }
-            .background(CustomColors.background)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { withAnimation { showInfo.toggle() } }) {
-                        Image(systemName: showInfo ? "info.circle.fill" : "info.circle")
-                            .foregroundColor(CustomColors.accent)
+            .padding(.vertical)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    withAnimation {
+                        showInfo.toggle()
                     }
+                }) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(CustomColors.accent)
                 }
             }
         }
         .fileImporter(
             isPresented: $showFilePicker,
-            allowedContentTypes: [.ics, .plainText],
+            allowedContentTypes: [.ics],
             allowsMultipleSelection: false
         ) { result in
             handleFileImport(result)
+        }
+        .alert("Fehler", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK") {
+                errorMessage = nil
+            }
+        } message: {
+            if let error = errorMessage {
+                Text(error)
+            }
         }
     }
     
@@ -582,4 +562,23 @@ extension ValidationCategory: CaseIterable {
         .teilnehmer,
         .erinnerungen
     ]
+}
+
+struct ValidationResultsView: View {
+    let results: [ValidationCheck]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            ValidationSummaryView(results: results)
+                .padding(.bottom)
+            
+            ForEach(ValidationCategory.allCases, id: \.self) { category in
+                let categoryResults = results.filter { $0.category == category }
+                if !categoryResults.isEmpty {
+                    ValidationCategoryView(category: category, results: categoryResults)
+                }
+            }
+        }
+        .padding()
+    }
 }

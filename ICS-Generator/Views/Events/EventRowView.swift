@@ -4,6 +4,7 @@ struct EventRowView: View {
     let event: ICSEvent
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var viewModel: EventViewModel
+    @State private var showingDeleteAlert = false
     
     private var isToday: Bool {
         Calendar.current.isDateInToday(event.startDate)
@@ -50,7 +51,7 @@ struct EventRowView: View {
                     .lineLimit(1)
                 
                 if let location = event.location, !location.isEmpty {
-                    Label(location, systemImage: "mappin")
+                    Label(title: { Text(location) }, icon: { Image(systemName: "mappin") })
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -77,37 +78,30 @@ struct EventRowView: View {
             
             Spacer()
             
-            // Chevron
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.trailing, 4)
+            // Menü statt Chevron
+            Menu {
+                Button(action: {
+                    viewModel.editingEvent = event
+                    viewModel.showingEditSheet = true
+                }) {
+                    Label(title: { Text("Bearbeiten") }, icon: { Image(systemName: "pencil") })
+                }
+                
+                Button(role: .destructive, action: {
+                    viewModel.deleteEvent(event)
+                }) {
+                    Label(title: { Text("Löschen") }, icon: { Image(systemName: "trash") })
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.trailing, 4)
+            }
         }
         .padding()
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(12)
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) {
-                viewModel.deleteEvent(event)
-            } label: {
-                Label("Löschen", systemImage: "trash")
-            }
-            
-            Button {
-                viewModel.shareEvent(event)
-            } label: {
-                Label("Teilen", systemImage: "square.and.arrow.up")
-            }
-            .tint(.blue)
-        }
-        .swipeActions(edge: .leading) {
-            Button {
-                viewModel.duplicateEvent(event)
-            } label: {
-                Label("Duplizieren", systemImage: "plus.square.on.square")
-            }
-            .tint(.green)
-        }
     }
 }
 

@@ -500,23 +500,79 @@ public class ICSValidator {
         let lines = content.components(separatedBy: .newlines)
         var stack: [String] = []
         var lineNumber = 0
+        var inEvent = false
+        var inAlarm = false
+        var eventCount = 0
+        var alarmCount = 0
+        
+        // Erlaubte Verschachtelungen
+        let allowedNesting: [String: Set<String>] = [
+            "VCALENDAR": ["VEVENT", "VTODO", "VJOURNAL", "VTIMEZONE"],
+            "VEVENT": ["VALARM"],
+            "VTODO": ["VALARM"],
+            "VJOURNAL": ["VALARM"]
+        ]
         
         for line in lines {
             lineNumber += 1
-            if line.hasPrefix("BEGIN:") {
-                let component = line.components(separatedBy: "BEGIN:")[1]
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            
+            if trimmedLine.hasPrefix("BEGIN:") {
+                let component = trimmedLine.components(separatedBy: "BEGIN:")[1]
+                
+                // Prüfe, ob die Verschachtelung erlaubt ist
+                if let parent = stack.last,
+                   let allowedComponents = allowedNesting[parent] {
+                    if !allowedComponents.contains(component) {
+                        return (false, "Ungültige Verschachtelung in Zeile \(lineNumber): \(component) ist nicht erlaubt innerhalb von \(parent)")
+                    }
+                }
+                
+                if component == "VEVENT" {
+                    inEvent = true
+                    eventCount += 1
+                } else if component == "VALARM" {
+                    if !inEvent {
+                        return (false, "VALARM muss innerhalb eines VEVENT sein (Zeile \(lineNumber))")
+                    }
+                    inAlarm = true
+                    alarmCount += 1
+                }
+                
                 stack.append(component)
-            } else if line.hasPrefix("END:") {
-                let component = line.components(separatedBy: "END:")[1]
+            } else if trimmedLine.hasPrefix("END:") {
+                let component = trimmedLine.components(separatedBy: "END:")[1]
                 if stack.isEmpty || stack.last != component {
                     return (false, "Fehlerhafte Verschachtelung in Zeile \(lineNumber): END:\(component)")
                 }
+                
+                if component == "VEVENT" {
+                    inEvent = false
+                } else if component == "VALARM" {
+                    inAlarm = false
+                }
+                
                 stack.removeLast()
+            } else if inAlarm {
+                // Validiere VALARM-Eigenschaften
+                if let colonIndex = trimmedLine.firstIndex(of: ":") {
+                    let key = String(trimmedLine[..<colonIndex])
+                    if key == "ACTION" {
+                        let value = String(trimmedLine[trimmedLine.index(after: colonIndex)...])
+                        if !["AUDIO", "DISPLAY", "EMAIL"].contains(value) {
+                            return (false, "Ungültige ACTION in VALARM: \(value)")
+                        }
+                    }
+                }
             }
         }
         
         if !stack.isEmpty {
             return (false, "Nicht alle Komponenten wurden geschlossen: \(stack.joined(separator: ", "))")
+        }
+        
+        if eventCount == 0 {
+            return (false, "Keine VEVENT-Komponente gefunden")
         }
         
         return (true, "Verschachtelung ist korrekt")

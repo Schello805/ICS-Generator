@@ -9,8 +9,9 @@ struct ICSEvent: Identifiable, Codable, Hashable {
     var location: String?
     var notes: String?
     var url: String?
-    var travelTime: Int
     var alert: AlertTime
+    var secondAlert: AlertTime
+    var travelTime: Int
     var recurrence: RecurrenceRule
     var customRecurrence: CustomRecurrence?
     var attachments: [Attachment]
@@ -19,19 +20,22 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         !title.isEmpty && endDate >= startDate
     }
     
-    init(id: UUID = UUID(), 
-         title: String, 
-         startDate: Date, 
-         endDate: Date,
-         isAllDay: Bool = false,
-         location: String? = nil, 
-         notes: String? = nil,
-         url: String? = nil,
-         travelTime: Int = 0,
-         alert: AlertTime = .fifteenMinutes,
-         recurrence: RecurrenceRule = .none,
-         customRecurrence: CustomRecurrence? = nil,
-         attachments: [Attachment] = []) {
+    init(
+        id: UUID = UUID(),
+        title: String,
+        startDate: Date,
+        endDate: Date,
+        isAllDay: Bool = false,
+        location: String? = nil,
+        notes: String? = nil,
+        url: String? = nil,
+        alert: AlertTime = .fifteenMinutes,
+        secondAlert: AlertTime = .none,
+        travelTime: Int = 0,
+        recurrence: RecurrenceRule = .none,
+        customRecurrence: CustomRecurrence? = nil,
+        attachments: [Attachment] = []
+    ) {
         self.id = id
         self.title = title
         self.startDate = startDate
@@ -40,8 +44,9 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         self.location = location
         self.notes = notes
         self.url = url
-        self.travelTime = travelTime
         self.alert = alert
+        self.secondAlert = secondAlert
+        self.travelTime = travelTime
         self.recurrence = recurrence
         self.customRecurrence = customRecurrence
         self.attachments = attachments
@@ -119,59 +124,24 @@ struct ICSEvent: Identifiable, Codable, Hashable {
             components.append("URL:\(escapeString(url))")
         }
         
-        // Alert
         if alert != .none {
             components.append("BEGIN:VALARM")
             components.append("ACTION:DISPLAY")
-            components.append("DESCRIPTION:\(escapeString(title))")
-            
-            let trigger: String
-            switch alert {
-            case .none:
-                trigger = ""
-            case .atTime:
-                trigger = "TRIGGER;VALUE=DATE-TIME:\(formatDate(startDate))"
-            case .fiveMinutes:
-                trigger = "TRIGGER:-PT5M"
-            case .tenMinutes:
-                trigger = "TRIGGER:-PT10M"
-            case .fifteenMinutes:
-                trigger = "TRIGGER:-PT15M"
-            case .thirtyMinutes:
-                trigger = "TRIGGER:-PT30M"
-            case .oneHour:
-                trigger = "TRIGGER:-PT1H"
-            case .twoHours:
-                trigger = "TRIGGER:-PT2H"
-            case .oneDay:
-                trigger = "TRIGGER:-P1D"
-            case .twoDays:
-                trigger = "TRIGGER:-P2D"
-            case .oneWeek:
-                trigger = "TRIGGER:-P1W"
-            }
-            if !trigger.isEmpty {
-                components.append(trigger)
-                components.append("END:VALARM")
-            }
+            components.append("DESCRIPTION:Hinweis")
+            components.append("TRIGGER:\(alert.triggerValue)")
+            components.append("END:VALARM")
         }
         
-        // Recurrence
-        switch recurrence {
-        case .none:
-            break
-        case .daily:
-            components.append("RRULE:FREQ=DAILY")
-        case .weekly:
-            components.append("RRULE:FREQ=WEEKLY")
-        case .monthly:
-            components.append("RRULE:FREQ=MONTHLY")
-        case .yearly:
-            components.append("RRULE:FREQ=YEARLY")
-        case .custom:
-            if let custom = customRecurrence {
-                components.append("RRULE:" + custom.toRRuleString())
-            }
+        if secondAlert != .none {
+            components.append("BEGIN:VALARM")
+            components.append("ACTION:DISPLAY")
+            components.append("DESCRIPTION:2. Hinweis")
+            components.append("TRIGGER:\(secondAlert.triggerValue)")
+            components.append("END:VALARM")
+        }
+        
+        if recurrence != .none {
+            components.append("RRULE:\(recurrence.toICSString(customRecurrence: customRecurrence))")
         }
         
         components.append("END:VEVENT")
@@ -224,40 +194,62 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         guard validation.isValid else { return nil }
         
         var title = ""
-        var startDate = Date()
-        var endDate = Date()
+        var startDate: Date?
+        var endDate: Date?
         var isAllDay = false
         var location: String?
         var notes: String?
         var url: String?
         var alert: AlertTime = .none
-        var recurrence: RecurrenceRule = .none
+        var secondAlert: AlertTime = .none
         var inAlarm = false
         var alarmTrigger: String?
+        var isInSecondAlarm = false
+        var recurrence: RecurrenceRule = .none
+        var customRecurrence: CustomRecurrence?
         
         let lines = icsString.components(separatedBy: .newlines)
         for line in lines {
-            if line == "BEGIN:VALARM" {
+            if line.hasPrefix("BEGIN:VALARM") {
                 inAlarm = true
-            } else if line == "END:VALARM" {
+            } else if line.hasPrefix("END:VALARM") {
+                if let trigger = alarmTrigger {
+                    let alertTime = AlertTime.from(triggerString: trigger)
+                    if isInSecondAlarm {
+                        secondAlert = alertTime
+                    } else {
+                        alert = alertTime
+                    }
+                }
                 inAlarm = false
-            } else if inAlarm && line.hasPrefix("TRIGGER:") {
-                alarmTrigger = String(line.dropFirst(8))
+                alarmTrigger = nil
+                isInSecondAlarm = false
+            } else if inAlarm {
+                if line.hasPrefix("TRIGGER:") {
+                    alarmTrigger = String(line.dropFirst(8))
+                } else if line.hasPrefix("DESCRIPTION:") {
+                    let description = String(line.dropFirst(12))
+                    isInSecondAlarm = description == "2. Hinweis"
+                }
             } else if line.hasPrefix("SUMMARY:") {
                 title = String(line.dropFirst(8))
             } else if line.hasPrefix("DTSTART") {
-                if line.contains("VALUE=DATE:") {
+                let dateString: String
+                if line.contains(";VALUE=DATE:") {
                     isAllDay = true
-                    startDate = parseAllDayDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                    dateString = String(line.split(separator: ":")[1])
                 } else {
-                    startDate = parseDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                    dateString = String(line.dropFirst(8))
                 }
+                startDate = parseDate(dateString, isAllDay: isAllDay)
             } else if line.hasPrefix("DTEND") {
-                if line.contains("VALUE=DATE:") {
-                    endDate = parseAllDayDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                let dateString: String
+                if line.contains(";VALUE=DATE:") {
+                    dateString = String(line.split(separator: ":")[1])
                 } else {
-                    endDate = parseDate(String(line.split(separator: ":").last ?? "")) ?? Date()
+                    dateString = String(line.dropFirst(6))
                 }
+                endDate = parseDate(dateString, isAllDay: isAllDay)
             } else if line.hasPrefix("LOCATION:") {
                 location = String(line.dropFirst(9))
             } else if line.hasPrefix("DESCRIPTION:") {
@@ -265,38 +257,27 @@ struct ICSEvent: Identifiable, Codable, Hashable {
             } else if line.hasPrefix("URL:") {
                 url = String(line.dropFirst(4))
             } else if line.hasPrefix("RRULE:") {
-                let rruleString = String(line.dropFirst(6))
-                recurrence = RecurrenceRule.from(icsString: rruleString)
-            }
-        }
-        
-        if let trigger = alarmTrigger {
-            switch trigger {
-            case "-PT0M": alert = .atTime
-            case "-PT5M": alert = .fiveMinutes
-            case "-PT10M": alert = .tenMinutes
-            case "-PT15M": alert = .fifteenMinutes
-            case "-PT30M": alert = .thirtyMinutes
-            case "-PT1H": alert = .oneHour
-            case "-PT2H": alert = .twoHours
-            case "-P1D": alert = .oneDay
-            case "-P2D": alert = .twoDays
-            case "-P1W": alert = .oneWeek
-            default: alert = .none
+                recurrence = RecurrenceRule.from(icsString: String(line.dropFirst(6)))
+                if recurrence == .custom {
+                    customRecurrence = CustomRecurrence.from(icsString: String(line.dropFirst(6)))
+                }
             }
         }
         
         return ICSEvent(
             title: title,
-            startDate: startDate,
-            endDate: endDate,
+            startDate: startDate ?? Date(),
+            endDate: endDate ?? Date(),
             isAllDay: isAllDay,
             location: location,
             notes: notes,
             url: url,
-            travelTime: 0,
             alert: alert,
-            recurrence: recurrence
+            secondAlert: secondAlert,
+            travelTime: 0,
+            recurrence: recurrence,
+            customRecurrence: customRecurrence,
+            attachments: []
         )
     }
     
@@ -306,15 +287,13 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         return dateFormatter.date(from: dateString) != nil
     }
     
-    private static func parseDate(_ dateString: String) -> Date? {
+    private static func parseDate(_ dateString: String, isAllDay: Bool) -> Date? {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
-        return dateFormatter.date(from: dateString)
-    }
-    
-    private static func parseAllDayDate(_ dateString: String) -> Date? {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyyMMdd"
+        if isAllDay {
+            dateFormatter.dateFormat = "yyyyMMdd"
+        } else {
+            dateFormatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        }
         return dateFormatter.date(from: dateString)
     }
     
@@ -328,8 +307,9 @@ struct ICSEvent: Identifiable, Codable, Hashable {
             location: self.location,
             notes: self.notes,
             url: self.url,
-            travelTime: self.travelTime,
             alert: self.alert,
+            secondAlert: self.secondAlert,
+            travelTime: self.travelTime,
             recurrence: self.recurrence,
             customRecurrence: self.customRecurrence,
             attachments: self.attachments
@@ -398,6 +378,22 @@ struct ICSEvent: Identifiable, Codable, Hashable {
             case .oneDay: return "-P1D"
             case .twoDays: return "-P2D"
             case .oneWeek: return "-P1W"
+            }
+        }
+        
+        static func from(triggerString: String) -> AlertTime {
+            switch triggerString {
+            case "-PT0M": return .atTime
+            case "-PT5M": return .fiveMinutes
+            case "-PT10M": return .tenMinutes
+            case "-PT15M": return .fifteenMinutes
+            case "-PT30M": return .thirtyMinutes
+            case "-PT1H": return .oneHour
+            case "-PT2H": return .twoHours
+            case "-P1D": return .oneDay
+            case "-P2D": return .twoDays
+            case "-P1W": return .oneWeek
+            default: return .none
             }
         }
     }
@@ -480,7 +476,7 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         }
     }
     
-    struct Attachment: Identifiable, Codable {
+    struct Attachment: Identifiable, Codable, Equatable {
         let id: UUID
         let fileName: String
         let data: Data
@@ -491,6 +487,13 @@ struct ICSEvent: Identifiable, Codable, Hashable {
             self.fileName = fileName
             self.data = data
             self.type = type
+        }
+        
+        static func == (lhs: Attachment, rhs: Attachment) -> Bool {
+            return lhs.id == rhs.id &&
+                   lhs.fileName == rhs.fileName &&
+                   lhs.data == rhs.data &&
+                   lhs.type == rhs.type
         }
     }
     
@@ -531,12 +534,12 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         }
     }
     
-    struct CustomRecurrence: Codable {
+    struct CustomRecurrence: Codable, Equatable {
         var frequency: RecurrenceRule
         var interval: Int
         var count: Int?
         var until: Date?
-        var weekDays: Set<WeekDay>?
+        var weekDays: Set<WeekDay>
         
         func toRRuleString() -> String {
             var components = ["FREQ=\(frequency.rawValue)"]
@@ -556,12 +559,42 @@ struct ICSEvent: Identifiable, Codable, Hashable {
                 components.append("UNTIL=\(formatter.string(from: until))")
             }
             
-            if let weekDays = weekDays, !weekDays.isEmpty {
+            if !weekDays.isEmpty {
                 let days = weekDays.map { $0.rawValue }.sorted().joined(separator: ",")
                 components.append("BYDAY=\(days)")
             }
             
             return components.joined(separator: ";")
+        }
+        
+        static func from(icsString: String) -> CustomRecurrence? {
+            let components = icsString.components(separatedBy: ";")
+            
+            var frequency: RecurrenceRule = .none
+            var interval: Int = 1
+            var count: Int?
+            var until: Date?
+            var weekDays: Set<WeekDay> = []
+            
+            for component in components {
+                if component.hasPrefix("FREQ=") {
+                    frequency = RecurrenceRule(rawValue: String(component.dropFirst(5))) ?? .none
+                } else if component.hasPrefix("INTERVAL=") {
+                    interval = Int(String(component.dropFirst(9))) ?? 1
+                } else if component.hasPrefix("COUNT=") {
+                    count = Int(String(component.dropFirst(6)))
+                } else if component.hasPrefix("UNTIL=") {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+                    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+                    until = formatter.date(from: String(component.dropFirst(6)))
+                } else if component.hasPrefix("BYDAY=") {
+                    let days = String(component.dropFirst(6)).components(separatedBy: ",")
+                    weekDays = Set(days.compactMap { WeekDay(rawValue: $0) })
+                }
+            }
+            
+            return CustomRecurrence(frequency: frequency, interval: interval, count: count, until: until, weekDays: weekDays)
         }
     }
 }

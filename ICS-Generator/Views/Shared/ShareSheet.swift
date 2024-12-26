@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct ShareSheet: UIViewControllerRepresentable {
     let activityItems: [Any]
@@ -9,6 +10,17 @@ struct ShareSheet: UIViewControllerRepresentable {
             activityItems: activityItems,
             applicationActivities: nil
         )
+        
+        // Setze completion handler für Debugging
+        controller.completionWithItemsHandler = { (activityType: UIActivity.ActivityType?, completed: Bool, returnedItems: [Any]?, error: Error?) in
+            if let error = error {
+                print("Share error: \(error.localizedDescription)")
+            }
+            if completed {
+                print("Share completed")
+            }
+        }
+        
         return controller
     }
     

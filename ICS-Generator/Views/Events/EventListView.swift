@@ -4,6 +4,7 @@ struct EventListView: View {
     let events: [ICSEvent]
     @Binding var selectedEvent: ICSEvent?
     @Binding var isRefreshing: Bool
+    @EnvironmentObject var viewModel: EventViewModel
     
     var body: some View {
         ScrollView {
@@ -33,6 +34,7 @@ struct EventListView: View {
 struct MonthSection: View {
     let group: EventGroup
     @Binding var selectedEvent: ICSEvent?
+    @EnvironmentObject var viewModel: EventViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -42,7 +44,7 @@ struct MonthSection: View {
                 .foregroundColor(CustomColors.text)
             
             ForEach(group.events) { event in
-                EventRowView(event: event)
+                EventRowView(event: event, viewModel: viewModel)
                     .onTapGesture {
                         selectedEvent = event
                     }

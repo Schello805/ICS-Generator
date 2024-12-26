@@ -1,125 +1,197 @@
 import SwiftUI
+import os.log
 
 struct EventsView: View {
     @EnvironmentObject var viewModel: EventViewModel
-    @State private var selectedEvent: ICSEvent?
-    @State private var showAddEvent = false
-    @State private var showEditEvent = false
-    @State private var isRefreshing = false
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ICS-Generator", category: "EventsView")
+    @State private var showingAddEvent = false
+    @State private var eventToEdit: ICSEvent?
+    @State private var showingImportSheet = false
+    @State private var showingValidationSheet = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     @State private var searchText = ""
     @State private var showingFilterSheet = false
     @State private var selectedFilter: EventFilter = .all
-    @State private var showingImportSheet = false
-    @State private var showingExportOptions = false
-    @State private var showingDeleteConfirmation = false
-    @State private var showingPreview = false
-    @State private var showingValidator = false
-    @State private var previewContent: String = ""
     
     private var filteredEvents: [ICSEvent] {
+        // Zuerst nach Filter filtern
         let filtered = selectedFilter.filter(viewModel.events)
-        if searchText.isEmpty {
+        
+        // Wenn kein Suchtext, gib gefilterte Events zurück
+        guard !searchText.isEmpty else {
             return filtered
         }
+        
+        // Suche in gefilterten Events
         return filtered.filter { event in
-            event.title.localizedCaseInsensitiveContains(searchText) ||
-            (event.location ?? "").localizedCaseInsensitiveContains(searchText) ||
-            (event.notes ?? "").localizedCaseInsensitiveContains(searchText)
+            let searchableFields = [
+                event.title,
+                event.location ?? "",
+                event.notes ?? ""
+            ]
+            
+            return searchableFields.contains { field in
+                field.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+    
+    private var groupedEvents: [(String, [ICSEvent])] {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMMM yyyy"
+        dateFormatter.locale = Locale(identifier: "de_DE")
+        
+        let grouped = Dictionary(grouping: filteredEvents) { event in
+            dateFormatter.string(from: event.startDate)
+        }
+        
+        return grouped.sorted { $0.key < $1.key }
+    }
+    
+    // MARK: - View Components
+    
+    @ViewBuilder
+    private var toolbarContent: some View {
+        if !viewModel.events.isEmpty {
+            HStack(spacing: 16) {
+                Menu {
+                    Button(action: { showingImportSheet = true }) {
+                        Label("ICS importieren", systemImage: "square.and.arrow.down")
+                    }
+                    Button(action: { showingValidationSheet = true }) {
+                        Label("ICS validieren", systemImage: "checkmark.shield")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                Button(action: { showingAddEvent = true }) {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var mainContent: some View {
+        if viewModel.events.isEmpty {
+            EmptyStateView(
+                showAddEvent: $showingAddEvent,
+                showingImportSheet: $showingImportSheet,
+                showingValidationSheet: $showingValidationSheet
+            )
+        } else {
+            eventsList
+        }
+    }
+    
+    @ViewBuilder
+    private var eventsList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                ForEach(groupedEvents, id: \.0) { month, events in
+                    Section(header: MonthHeaderView(title: month)) {
+                        VStack(spacing: 12) {
+                            ForEach(events) { event in
+                                EventListItem(
+                                    event: event,
+                                    onEdit: { eventToEdit = event },
+                                    onDelete: { viewModel.deleteEvent(event) }
+                                )
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                    }
+                }
+            }
         }
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 0) {
-                // Search and Filter Bar
-                SearchAndFilterView(
-                    searchText: $searchText,
-                    selectedFilter: $selectedFilter,
-                    showingFilterSheet: $showingFilterSheet
-                )
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .background(
-                    Color(.systemBackground)
-                        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
-                )
+        NavigationStack {
+            ZStack {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
                 
-                // Content
-                ScrollView {
-                    // Add some top padding to avoid shadow overlap
-                    Color.clear.frame(height: 8)
+                VStack(spacing: 0) {
+                    SearchAndFilterView(
+                        searchText: $searchText,
+                        selectedFilter: $selectedFilter,
+                        showingFilterSheet: $showingFilterSheet
+                    )
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemBackground))
                     
-                    if filteredEvents.isEmpty {
-                        EmptyStateView(
-                            title: "Keine Termine",
-                            message: "Erstellen Sie einen neuen Termin mit dem + Button",
-                            systemImage: "calendar"
-                        )
-                        .padding()
-                    } else {
-                        LazyVStack(spacing: 12) {
-                            ForEach(filteredEvents) { event in
-                                EventRowView(event: event, viewModel: viewModel)
-                                    .onTapGesture {
-                                        selectedEvent = event
-                                        showEditEvent = true
-                                    }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.bottom)
+                    mainContent
+                }
+            }
+            .navigationTitle("Termine")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        viewModel.previewContent = viewModel.exportToString(events: filteredEvents)
+                        viewModel.showingExportOptions = true
+                    }) {
+                        Image(systemName: "square.and.arrow.up")
                     }
                 }
-                .refreshable {
-                    isRefreshing = true
-                    viewModel.loadEvents()
-                    isRefreshing = false
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddEvent = true }) {
+                        Image(systemName: "plus")
+                    }
                 }
             }
-            
-            // Add Event Button
-            AddEventButton {
-                showAddEvent = true
-            }
-        }
-        .sheet(isPresented: $showAddEvent) {
-            AddEventView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showEditEvent) {
-            if let event = selectedEvent {
+            .sheet(isPresented: $showingValidationSheet) {
                 NavigationStack {
-                    EventEditorView(event: event)
+                    SettingsView(selectedTab: .icsValidation)
+                        .environmentObject(viewModel)
                 }
             }
-        }
-        .sheet(isPresented: $showingFilterSheet) {
-            FilterSheetView(selectedFilter: $selectedFilter)
-        }
-        .sheet(isPresented: $showingImportSheet) {
-            ImportView()
-        }
-        .sheet(isPresented: $showingExportOptions) {
-            ExportOptionsView(content: previewContent)
-        }
-        .sheet(isPresented: $showingValidator) {
-            ICSValidatorView()
-        }
-        .alert("Alle Termine löschen?", isPresented: $showingDeleteConfirmation) {
-            Button("Abbrechen", role: .cancel) { }
-            Button("Löschen", role: .destructive) {
-                viewModel.deleteAllEvents()
+            .sheet(item: $eventToEdit) { event in
+                EventEditorView(event: event)
             }
-        } message: {
-            Text("Möchten Sie wirklich alle Termine löschen? Diese Aktion kann nicht rückgängig gemacht werden.")
+            .sheet(isPresented: $showingAddEvent) {
+                AddEventView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingImportSheet) {
+                NavigationStack {
+                    SettingsView(selectedTab: .icsImport)
+                        .environmentObject(viewModel)
+                }
+            }
+            .sheet(isPresented: $viewModel.showingExportOptions) {
+                ICSPreviewView(icsContent: viewModel.previewContent, events: filteredEvents)
+            }
+            .alert("Termin löschen", isPresented: $viewModel.showingDeleteConfirmation) {
+                Button("Abbrechen", role: .cancel) {
+                    viewModel.cancelDelete()
+                }
+                Button("Löschen", role: .destructive) {
+                    viewModel.confirmDelete()
+                }
+            } message: {
+                if let event = viewModel.eventToDelete {
+                    Text("Möchten Sie den Termin '\(event.title)' wirklich löschen?")
+                }
+            }
+            .alert("Fehler", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
         }
+    }
+    
+    private func deleteEvent(_ event: ICSEvent) {
+        viewModel.deleteEvent(event)
     }
 }
 
 struct EventsView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationStack {
-            EventsView()
-                .environmentObject(EventViewModel())
-        }
+        EventsView()
     }
 }

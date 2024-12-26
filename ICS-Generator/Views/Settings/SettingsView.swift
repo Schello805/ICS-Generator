@@ -3,13 +3,52 @@ import UniformTypeIdentifiers
 import StoreKit
 
 struct SettingsView: View {
+    enum Tab {
+        case general
+        case icsImport
+        case icsValidation
+        case icsExport
+    }
+    
     @EnvironmentObject var viewModel: EventViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("defaultAlert") private var defaultAlert: String = ICSEvent.AlertTime.fifteenMinutes.rawValue
     @State private var showingResetAlert = false
     
+    var selectedTab: Tab = .general
+    
     var body: some View {
+        Group {
+            switch selectedTab {
+            case .general:
+                generalSettings
+            case .icsImport:
+                ICSImportView(viewModel: viewModel)
+            case .icsValidation:
+                ICSValidatorView()
+            case .icsExport:
+                exportSettings
+            }
+        }
+        .navigationTitle(navigationTitle)
+    }
+    
+    private var navigationTitle: String {
+        switch selectedTab {
+        case .general:
+            return "Einstellungen"
+        case .icsImport:
+            return "ICS importieren"
+        case .icsValidation:
+            return "ICS validieren"
+        case .icsExport:
+            return "Export-Einstellungen"
+        }
+    }
+    
+    @ViewBuilder
+    private var generalSettings: some View {
         List {
             Section(header: Text("Standard-Einstellungen")) {
                 Picker("Standard-Erinnerung", selection: Binding(
@@ -24,6 +63,12 @@ struct SettingsView: View {
             }
             
             Section {
+                NavigationLink {
+                    ExportSettingsView()
+                } label: {
+                    Label("Export-Einstellungen", systemImage: "arrow.up.doc")
+                }
+                
                 NavigationLink {
                     ICSValidatorView()
                 } label: {
@@ -40,9 +85,7 @@ struct SettingsView: View {
             }
             
             Section(header: Text("Daten")) {
-                Button(role: .destructive, action: {
-                    showingResetAlert = true
-                }) {
+                Button(role: .destructive, action: { showingResetAlert = true }) {
                     Label("Alle Termine löschen", systemImage: "trash")
                 }
             }
@@ -83,9 +126,8 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .navigationTitle("Einstellungen")
-        .alert("Alle Termine löschen?", isPresented: $showingResetAlert) {
-            Button("Abbrechen", role: .cancel) {}
+        .alert("Termine löschen", isPresented: $showingResetAlert) {
+            Button("Abbrechen", role: .cancel) { }
             Button("Löschen", role: .destructive) {
                 withAnimation {
                     viewModel.events.removeAll()
@@ -93,7 +135,17 @@ struct SettingsView: View {
                 }
             }
         } message: {
-            Text("Diese Aktion kann nicht rückgängig gemacht werden.")
+            Text("Möchten Sie wirklich alle Termine löschen? Diese Aktion kann nicht rückgängig gemacht werden.")
+        }
+    }
+    
+    @ViewBuilder
+    private var exportSettings: some View {
+        List {
+            Section(header: Text("Export-Einstellungen")) {
+                // Export settings content here
+                Text("Export-Einstellungen kommen bald")
+            }
         }
     }
     
@@ -102,7 +154,7 @@ struct SettingsView: View {
         case .none:
             return "Keine"
         case .atTime:
-            return "Zum Startzeitpunkt"
+            return "Zum Zeitpunkt"
         case .fiveMinutes:
             return "5 Minuten vorher"
         case .tenMinutes:

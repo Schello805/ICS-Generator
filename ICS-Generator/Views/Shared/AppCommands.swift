@@ -24,11 +24,6 @@ struct AppCommands: Commands {
                 }
                 .keyboardShortcut("d", modifiers: .command)
                 
-                Button("Termin teilen") {
-                    viewModel.shareEvent(event)
-                }
-                .keyboardShortcut("s", modifiers: .command)
-                
                 Button("Termin löschen", role: .destructive) {
                     viewModel.deleteEvent(event)
                 }
@@ -37,11 +32,6 @@ struct AppCommands: Commands {
         }
         
         CommandGroup(after: .importExport) {
-            Button("Alle Termine exportieren") {
-                viewModel.showExportOptions()
-            }
-            .keyboardShortcut("e", modifiers: [.command, .shift])
-            
             Button("ICS-Datei importieren") {
                 viewModel.showingImportSheet = true
             }

@@ -1,54 +1,59 @@
-# ICS Generator iOS App - Status Update (25.12.2024 12:37)
+# ICS Generator iOS App - Status Update (25.12.2024 21:19)
 
 ## Aktueller Stand
 
-### Hauptproblem
-- Mehrfachdefinitionen von Views und Enums in verschiedenen Dateien verursachen Kompilierungsfehler
-- Insbesondere `EventFilter`, `EventsView` und `SearchAndFilterView` sind mehrfach definiert
+### Hauptfunktionalitäten
+- Event-Verwaltung (Erstellen, Bearbeiten, Löschen)
+- ICS-Export mit korrekter Validierung
+- Datei-Sharing über System-Share-Sheet
+- Suchfunktion und Filterung
+- Benutzerfreundliche UI mit Vorschau-Option
+- Anpassbare Export-Dateinamen mit Variablen
 
-### Dateien mit Konflikten
-1. **ContentView.swift**
-   - Enthält doppelte Definitionen von:
-     - `EventFilter` (sollte nur in Models/EventFilter.swift sein)
-     - `EventsView` (sollte nur in Views/Events/EventsView.swift sein)
-     - `SearchAndFilterView` (sollte nur in Views/Shared/SearchAndFilterView.swift sein)
+### Letzte Änderungen
+1. **Export-Funktionalität Verbesserungen**
+   - Integration der ICSPreviewView für Export-Funktionalität
+   - Korrektes Ersetzen von Variablen im Dateinamen
+   - Verbesserte Benutzerführung mit Vorschau-Option
 
-### Korrekte Dateistruktur
-- `Models/EventFilter.swift`: Enthält die korrekte Definition von `EventFilter`
-- `Views/Events/EventsView.swift`: Enthält die korrekte Definition von `EventsView`
-- `Views/Shared/SearchAndFilterView.swift`: Enthält die korrekte Definition von `SearchAndFilterView`
+2. **ICSPreviewView Optimierungen**
+   - Implementierung der Export-Funktionalität
+   - Verbesserte Dateinamen-Generierung
+   - Korrekte Verwendung der ExportSettings
 
-## Nächste Schritte
-
-1. **ContentView.swift bereinigen**
-   - Alle doppelten Definitionen entfernen
-   - Nur die `ContentView` und ihre Preview behalten
-   - Notwendige Imports hinzufügen
-
-2. **Referenzen überprüfen**
-   - Sicherstellen, dass alle Views die korrekten Importe haben
-   - Überprüfen, dass `EventFilter` korrekt importiert wird
-
-3. **Build-Fehler beheben**
-   - Nach der Bereinigung von ContentView.swift sollten die meisten Fehler verschwunden sein
-   - Verbleibende Fehler in anderen Dateien prüfen und beheben
-
-## Wichtige Dateipfade
-- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Views/ContentView.swift`
-- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Models/EventFilter.swift`
-- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Views/Events/EventsView.swift`
-- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Views/Shared/SearchAndFilterView.swift`
+### Behobene Probleme
+- Variablen im Export-Dateinamen werden korrekt ersetzt
+- Export-Funktionalität ist nun in ICSPreviewView integriert
+- Verbesserte Benutzerführung beim Export
 
 ## Projektstruktur
 - `Views/`: Enthält alle SwiftUI Views
   - `Events/`: Event-bezogene Views
   - `Shared/`: Wiederverwendbare UI-Komponenten
   - `Settings/`: Einstellungen-bezogene Views
+  - `ICS/`: ICS-bezogene Views und Funktionalität
 - `Models/`: Datenmodelle und Enums
 - `ViewModels/`: View Models für die MVVM-Architektur
 - `Utilities/`: Hilfsfunktionen und -klassen
 
+## Nächste Schritte
+1. **Weitere Tests**
+   - Umfassende Tests des ICS-Exports
+   - Überprüfung der Dateikompatibilität
+   - Tests mit verschiedenen Kalender-Apps
+   - Tests der Dateinamen-Generierung mit verschiedenen Variablen
+
+2. **Mögliche Verbesserungen**
+   - Erweiterte Export-Optionen
+   - Batch-Export mehrerer Events
+   - Verbessertes Feedback bei Fehlern
+   - Weitere Variablen für Dateinamen
+
+## Wichtige Dateipfade
+- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Views/ICS/ICSPreviewView.swift`
+- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Views/Events/EventsView.swift`
+- `/Users/michaelschellenberger/Nextcloud/Progammierung/ICS Generator iOS App/ICS-Generator/ICS-Generator/Models/ExportVariables.swift`
+
 ## Offene Probleme
-1. Die edit_file Funktion scheint die Änderungen nicht direkt anzuwenden
-2. Möglicherweise müssen die Dateien manuell bearbeitet werden
-3. Nach der Bereinigung könnten noch weitere Build-Fehler auftauchen, die behoben werden müssen
+- Keine kritischen Probleme bekannt
+- Weitere Tests erforderlich, um Edge Cases zu identifizieren

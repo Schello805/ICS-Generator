@@ -4,92 +4,172 @@ struct EmptyStateView: View {
     @Binding var showAddEvent: Bool
     @Binding var showingImportSheet: Bool
     @Binding var showingValidationSheet: Bool
-    @Binding var showingExportOptions: Bool
+    @State private var isAnimating = false
+    @State private var showingInfo = false
     
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             Spacer()
             
-            // Header
-            VStack(spacing: 12) {
+            // Animated Header
+            VStack(spacing: 16) {
                 Image(systemName: "calendar.badge.plus")
-                    .font(.system(size: 48))
-                    .foregroundColor(CustomColors.accent)
+                    .font(.system(size: 70))
+                    .foregroundStyle(.linearGradient(
+                        colors: [.blue.opacity(0.8), .purple.opacity(0.8)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .symbolEffect(.bounce.down, options: .speed(0.5), value: isAnimating)
+                    .shadow(color: .black.opacity(0.05), radius: 8, y: 4)
                 
-                VStack(spacing: 4) {
-                    Text("Willkommen beim ICS Generator!")
-                        .font(.title3)
+                VStack(spacing: 8) {
+                    Text("Keine Termine")
+                        .font(.title2)
                         .bold()
-                        .foregroundColor(CustomColors.text)
                     
-                    Text("Erstellen Sie Ihre ersten Termine")
+                    Text("Erstellen Sie Ihren ersten Termin oder importieren Sie bestehende")
                         .font(.subheadline)
-                        .foregroundColor(CustomColors.secondaryText)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
             }
+            .opacity(isAnimating ? 1 : 0)
+            .offset(y: isAnimating ? 0 : 10)
             
-            // Feature Cards in Grid
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                CompactFeatureCard(
-                    icon: "calendar.badge.plus",
-                    title: "Termine erstellen",
-                    color: .blue,
-                    action: { showAddEvent = true }
-                )
+            // Action Buttons
+            VStack(spacing: 16) {
+                // Create Button
+                Button(action: { showAddEvent = true }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Termin erstellen")
+                                .font(.headline)
+                            Text("Neuen Termin hinzufügen")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
                 
-                CompactFeatureCard(
-                    icon: "arrow.triangle.2.circlepath",
-                    title: "Wiederholungen",
-                    color: .green,
-                    action: { showAddEvent = true }
-                )
-                
-                CompactFeatureCard(
-                    icon: "square.and.arrow.down",
-                    title: "ICS Import",
-                    color: .orange,
-                    action: { showingImportSheet = true }
-                )
-                
-                CompactFeatureCard(
-                    icon: "checkmark.shield",
-                    title: "ICS Validator",
-                    color: .purple,
-                    action: { showingValidationSheet = true }
-                )
+                HStack(spacing: 16) {
+                    // Import Button
+                    Button(action: { showingImportSheet = true }) {
+                        VStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.title2)
+                                .foregroundStyle(.green)
+                            Text("ICS importieren")
+                                .font(.callout)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    
+                    // Validate Button
+                    Button(action: { showingValidationSheet = true }) {
+                        VStack(spacing: 8) {
+                            Image(systemName: "checkmark.shield")
+                                .font(.title2)
+                                .foregroundStyle(.purple)
+                            Text("ICS validieren")
+                                .font(.callout)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal)
+            .opacity(isAnimating ? 1 : 0)
+            .offset(y: isAnimating ? 0 : 20)
+            
+            // Info Section
+            VStack(spacing: 16) {
+                Button(action: { withAnimation { showingInfo.toggle() }}) {
+                    HStack {
+                        Text("Was ist eine ICS-Datei?")
+                            .font(.subheadline)
+                            .bold()
+                        
+                        Image(systemName: "chevron.right")
+                            .rotationEffect(.degrees(showingInfo ? 90 : 0))
+                    }
+                    .foregroundColor(.secondary)
+                }
+                
+                if showingInfo {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("ICS ist ein universelles Format für Kalenderdaten, das von allen gängigen Kalender-Apps unterstützt wird.")
+                            .font(.subheadline)
+                        
+                        Text("Perfekt geeignet für:")
+                            .font(.subheadline)
+                            .bold()
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach([
+                                "Digitalisierung auf Papier gedruckter Termine aus Kindergarten und Schule",
+                                "Teilen von Veranstaltungskalendern",
+                                "Export von Terminen aus anderen Systemen",
+                                "Backup wichtiger Termine"
+                            ], id: \.self) { use in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Image(systemName: "circle.fill")
+                                        .font(.system(size: 6))
+                                        .padding(.top, 7)
+                                    
+                                    Text(use)
+                                        .font(.subheadline)
+                                }
+                            }
+                        }
+                        .padding(.leading, 4)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            }
+            .padding(.horizontal)
+            .opacity(isAnimating ? 1 : 0)
             
             Spacer()
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.5)) {
+                isAnimating = true
+            }
         }
     }
 }
 
-struct CompactFeatureCard: View {
-    let icon: String
-    let title: String
-    let color: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(color)
-                
-                Text(title)
-                    .font(.callout)
-                    .foregroundColor(CustomColors.text)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-        }
+#Preview {
+    ZStack {
+        Color(.systemGroupedBackground)
+            .ignoresSafeArea()
+        
+        EmptyStateView(
+            showAddEvent: .constant(false),
+            showingImportSheet: .constant(false),
+            showingValidationSheet: .constant(false)
+        )
     }
 }

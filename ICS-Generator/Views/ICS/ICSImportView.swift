@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import os
 
 struct ICSImportView: View {
     @ObservedObject var viewModel: EventViewModel
@@ -9,6 +10,9 @@ struct ICSImportView: View {
     @State private var showingSuccessMessage = false
     @State private var isImporting = false
     @State private var validationResults: [ValidationResult] = []
+    @State private var importedEventsCount = 0
+    
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ICS-Generator", category: "ICSImportView")
     
     struct ValidationResult: Identifiable {
         let id = UUID()
@@ -91,91 +95,67 @@ struct ICSImportView: View {
                 Text(text)
                     .font(.subheadline)
             }
+            .padding(.vertical, 2)
         }
     }
     
     var body: some View {
-        Form {
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(String(localized: "ICS-Datei importieren"))
-                        .font(.headline)
-                    
-                    Text(String(localized: "Importieren Sie einen Termin aus einer ICS-Datei in Ihre Terminliste."))
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
+        NavigationStack {
+            List {
+                Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        ImportFeatureItem(text: String(localized: "Unterstützt Outlook, Apple Calendar und Google Calendar"))
-                        ImportFeatureItem(text: String(localized: "Importiert Titel, Datum, Uhrzeit und Ort"))
-                        ImportFeatureItem(text: String(localized: "Erkennt ganztägige Termine"))
-                        ImportFeatureItem(text: String(localized: "Übernimmt Notizen und Beschreibungen"))
+                        Text("ICS-Datei importieren")
+                            .font(.headline)
+                        Text("Importieren Sie einen Termin aus einer ICS-Datei in Ihre Terminliste.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 4)
+                    
+                    ImportFeatureItem(text: "Unterstützt Outlook, Apple Calendar und Google Calendar")
+                    ImportFeatureItem(text: "Importiert Titel, Datum, Uhrzeit und Ort")
+                    ImportFeatureItem(text: "Erkennt ganztägige Termine")
+                    ImportFeatureItem(text: "Übernimmt Notizen und Beschreibungen")
                 }
-            }
-            
-            Section {
-                Button(action: {
-                    showingFilePicker = true
-                }) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.down")
-                            .foregroundColor(.blue)
-                        Text(String(localized: "ICS-Datei auswählen"))
-                    }
-                }
-                .disabled(isImporting)
-            }
-            
-            if let result = importResult {
+                
                 Section {
-                    VStack(alignment: .leading, spacing: 12) {
+                    Button(action: {
+                        showingFilePicker = true
+                    }) {
                         HStack {
-                            Image(systemName: result.success ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundColor(result.success ? .green : .red)
-                            Text(result.message)
-                                .font(.headline)
+                            Image(systemName: "square.and.arrow.down")
+                            Text("ICS-Datei auswählen")
                         }
-                        
-                        if !result.events.isEmpty {
-                            ForEach(result.events, id: \.id) { event in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(event.title)
-                                        .font(.headline)
-                                    Text(event.formattedDate)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    if let location = event.location {
-                                        Text(location)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                .padding(.vertical, 4)
+                    }
+                }
+                
+                if isImporting {
+                    Section {
+                        HStack {
+                            ProgressView()
+                                .padding(.trailing, 8)
+                            Text("Importiere...")
+                        }
+                    }
+                }
+                
+                if let result = importResult {
+                    Section {
+                        if result.success {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Label(result.message, systemImage: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
                             }
+                        } else {
+                            Label(result.message, systemImage: "xmark.circle.fill")
+                                .foregroundColor(.red)
                         }
                     }
                 }
             }
-            
-            if !validationResults.isEmpty {
-                Section {
-                    ForEach(validationResults, id: \.id) { result in
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(result.type.title)
-                                .font(.headline)
-                            Text(result.message)
-                                .font(.subheadline)
-                                .foregroundColor(result.passed ? .green : .red)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-            }
+            .navigationTitle("ICS importieren")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .navigationTitle(String(localized: "ICS importieren"))
-        .navigationBarTitleDisplayMode(.inline)
         .fileImporter(
             isPresented: $showingFilePicker,
             allowedContentTypes: [UTType(filenameExtension: "ics")!],
@@ -185,72 +165,8 @@ struct ICSImportView: View {
             
             switch result {
             case .success(let urls):
-                guard let selectedFileURL = urls.first else { return }
-                
-                guard selectedFileURL.startAccessingSecurityScopedResource() else {
-                    importResult = ImportResult(
-                        success: false,
-                        events: [],
-                        message: String(localized: "Keine Berechtigung zum Lesen der Datei")
-                    )
-                    isImporting = false
-                    return
-                }
-                
-                defer {
-                    selectedFileURL.stopAccessingSecurityScopedResource()
-                }
-                
-                processICSFile(selectedFileURL)
-            case .failure(let error):
-                importResult = ImportResult(
-                    success: false,
-                    events: [],
-                    message: String(localized: "Fehler beim Auswählen der Datei: \(error.localizedDescription)")
-                )
-            }
-            
-            isImporting = false
-        }
-        .overlay {
-            if isImporting {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .overlay {
-                        VStack {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                            Text(String(localized: "Importiere Termin..."))
-                                .foregroundColor(.white)
-                                .padding(.top)
-                        }
-                    }
-            }
-        }
-    }
-    
-    private func processICSFile(_ url: URL) {
-        do {
-            let content = try String(contentsOf: url, encoding: .utf8)
-            
-            // Validiere die ICS-Datei im Hintergrund
-            let validationResult = ICSValidator.validate(content)
-            switch validationResult {
-            case .success(let checks):
-                // Prüfe ob alle Validierungen erfolgreich waren
-                let isValid = checks.allSatisfy { $0.passed }
-                if isValid {
-                    // Fahre mit dem Import fort
-                    try processValidICSContent(content)
-                } else {
-                    // Zeige Fehlermeldung
-                    let failedChecks = checks.filter { !$0.passed }
-                    let errorMessages = failedChecks.compactMap { $0.message }
-                    importResult = ImportResult(
-                        success: false,
-                        events: [],
-                        message: errorMessages.joined(separator: "\n")
-                    )
+                if let url = urls.first {
+                    processICSFile(url)
                 }
             case .failure(let error):
                 importResult = ImportResult(
@@ -259,40 +175,90 @@ struct ICSImportView: View {
                     message: error.localizedDescription
                 )
             }
-        } catch {
+            
+            isImporting = false
+        }
+    }
+    
+    private func processICSFile(_ url: URL) {
+        logger.debug("Verarbeite ICS-Datei: \(url.path)")
+        
+        do {
+            // Überprüfe Dateizugriff
+            guard url.startAccessingSecurityScopedResource() else {
+                throw NSError(
+                    domain: "ICS Import",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "Keine Berechtigung zum Zugriff auf die Datei"]
+                )
+            }
+            defer {
+                url.stopAccessingSecurityScopedResource()
+            }
+            
+            // Lese Dateiinhalt
+            let content = try String(contentsOf: url, encoding: .utf8)
+            logger.debug("Dateiinhalt gelesen: \n\(content)")
+            
+            // Normalisiere Zeilenumbrüche
+            let normalizedContent = content.replacingOccurrences(of: "\r\n", with: "\n")
+                                        .replacingOccurrences(of: "\r", with: "\n")
+            
+            try processValidICSContent(normalizedContent)
+        } catch let error as NSError {
+            logger.error("Fehler beim Verarbeiten der ICS-Datei: \(error.localizedDescription)")
+            
+            let errorMessage: String
+            if error.domain == "ICS Import" {
+                errorMessage = error.localizedDescription
+            } else if error.code == NSFileReadNoPermissionError {
+                errorMessage = "Keine Berechtigung zum Lesen der Datei"
+            } else {
+                errorMessage = "Fehler beim Verarbeiten der ICS-Datei: \(error.localizedDescription)"
+            }
+            
             importResult = ImportResult(
                 success: false,
                 events: [],
-                message: error.localizedDescription
+                message: errorMessage
             )
         }
     }
     
     private func processValidICSContent(_ content: String) throws {
+        logger.debug("Starte Validierung des ICS-Inhalts")
         let lines = content.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        
+        logger.debug("Erste Zeile: '\(lines.first ?? "keine")'")
+        logger.debug("Letzte Zeile: '\(lines.last ?? "keine")'")
         
         // Validiere grundlegende VCALENDAR-Struktur
-        guard let firstLine = lines.first?.trimmingCharacters(in: .whitespaces),
-              let lastLine = lines.last?.trimmingCharacters(in: .whitespaces),
+        guard let firstLine = lines.first,
+              let lastLine = lines.last,
               firstLine == "BEGIN:VCALENDAR",
               lastLine == "END:VCALENDAR" else {
+            logger.error("Fehler: Ungültige VCALENDAR-Struktur - Erste Zeile: '\(lines.first ?? "keine")', Letzte Zeile: '\(lines.last ?? "keine")'")
             validationResults.append(.create(.structure, passed: false))
             return
         }
-        validationResults.append(.create(.structure, passed: true))
+        logger.debug("VCALENDAR-Struktur validiert")
         
         // Validiere Version
         guard lines.contains(where: { $0.trimmingCharacters(in: .whitespaces).hasPrefix("VERSION:2.0") }) else {
+            logger.error("Fehler: Ungültige Version")
             validationResults.append(.create(.version, passed: false))
             return
         }
-        validationResults.append(.create(.version, passed: true))
+        logger.debug("Version validiert")
         
         var currentEvent: [String: String] = [:]
         var currentAlarm: [String: String]?
         var isInEvent = false
         var isInAlarm = false
         var seenUIDs = Set<String>()
+        var successfulImports = 0
         
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
@@ -307,10 +273,12 @@ struct ICSImportView: View {
                         if !seenUIDs.contains(uid) {
                             seenUIDs.insert(uid)
                             viewModel.addEvent(event)
+                            successfulImports += 1
                         }
                     } else {
                         // Wenn keine UID vorhanden ist, generiere eine
                         viewModel.addEvent(event)
+                        successfulImports += 1
                     }
                 }
                 isInEvent = false
@@ -362,15 +330,14 @@ struct ICSImportView: View {
             }
         }
         
-        importResult = ImportResult(
-            success: true,
-            events: viewModel.events,
-            message: String(localized: "\(viewModel.events.count) Termin(e) erfolgreich importiert")
-        )
-        
-        // Automatisch schließen nach erfolgreichem Import
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            dismiss()
+        importedEventsCount = successfulImports
+        if successfulImports > 0 {
+            importResult = ImportResult(
+                success: true,
+                events: [],
+                message: "\(successfulImports) Events erfolgreich importiert"
+            )
+            showingSuccessMessage = true
         }
     }
     
@@ -379,6 +346,7 @@ struct ICSImportView: View {
         guard let action = alarm["ACTION"],
               ["AUDIO", "DISPLAY", "EMAIL"].contains(action),
               let trigger = alarm["TRIGGER"] else {
+            logger.error("Fehler: Ungültige Erinnerung")
             validationResults.append(.create(.alarms, passed: false))
             return false
         }
@@ -388,6 +356,7 @@ struct ICSImportView: View {
             // Duration format (e.g., PT15M)
             let durationPattern = #"^(-)?P(\d+W)?(\d+D)?(T(\d+H)?(\d+M)?(\d+S)?)?$"#
             guard trigger.range(of: durationPattern, options: .regularExpression) != nil else {
+                logger.error("Fehler: Ungültige Erinnerungsdauer")
                 validationResults.append(.create(.alarms, passed: false))
                 return false
             }
@@ -395,14 +364,17 @@ struct ICSImportView: View {
             // Absolute time format
             let dateStr = String(trigger.dropFirst("VALUE=DATE-TIME:".count))
             guard parseICSDate(dateStr, isAllDay: false, timezone: nil) != nil else {
+                logger.error("Fehler: Ungültige Erinnerungszeit")
                 validationResults.append(.create(.alarms, passed: false))
                 return false
             }
         } else {
+            logger.error("Fehler: Ungültige Erinnerung")
             validationResults.append(.create(.alarms, passed: false))
             return false
         }
         
+        logger.debug("Erinnerung validiert")
         validationResults.append(.create(.alarms, passed: true))
         return true
     }
@@ -413,6 +385,7 @@ struct ICSImportView: View {
             // Prüfe MIME-Type Format
             let mimePattern = #"^[a-zA-Z0-9]+/[a-zA-Z0-9\-\+\.]+$"#
             guard fmttype.range(of: mimePattern, options: .regularExpression) != nil else {
+                logger.error("Fehler: Ungültiger MIME-Type")
                 validationResults.append(.create(.attachments, passed: false))
                 return false
             }
@@ -421,17 +394,20 @@ struct ICSImportView: View {
         if attach.hasPrefix("data:") {
             // Inline-Daten
             guard attach.contains(";base64,") else {
+                logger.error("Fehler: Ungültige Inline-Daten")
                 validationResults.append(.create(.attachments, passed: false))
                 return false
             }
         } else {
             // URI
             guard URL(string: attach) != nil else {
+                logger.error("Fehler: Ungültige URI")
                 validationResults.append(.create(.attachments, passed: false))
                 return false
             }
         }
         
+        logger.debug("Anhang validiert")
         validationResults.append(.create(.attachments, passed: true))
         return true
     }
@@ -443,6 +419,7 @@ struct ICSImportView: View {
         for component in components {
             let parts = component.components(separatedBy: "=")
             guard parts.count == 2 else {
+                logger.error("Fehler: Ungültige Wiederholungsregel")
                 validationResults.append(.create(.recurrenceRule, passed: false))
                 return false
             }
@@ -454,21 +431,25 @@ struct ICSImportView: View {
             case "FREQ":
                 hasFreq = true
                 guard ["SECONDLY", "MINUTELY", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"].contains(value) else {
+                    logger.error("Fehler: Ungültige Wiederholungsregel")
                     validationResults.append(.create(.recurrenceRule, passed: false))
                     return false
                 }
             case "INTERVAL":
                 guard Int(value) != nil else {
+                    logger.error("Fehler: Ungültige Wiederholungsregel")
                     validationResults.append(.create(.recurrenceRule, passed: false))
                     return false
                 }
             case "UNTIL":
                 guard parseICSDate(value, isAllDay: false, timezone: nil) != nil else {
+                    logger.error("Fehler: Ungültige Wiederholungsregel")
                     validationResults.append(.create(.recurrenceRule, passed: false))
                     return false
                 }
             case "COUNT":
                 guard Int(value) != nil else {
+                    logger.error("Fehler: Ungültige Wiederholungsregel")
                     validationResults.append(.create(.recurrenceRule, passed: false))
                     return false
                 }
@@ -476,6 +457,7 @@ struct ICSImportView: View {
                 let numbers = value.components(separatedBy: ",")
                 for num in numbers {
                     guard let n = Int(num), n >= 0, n <= 59 else {
+                        logger.error("Fehler: Ungültige Wiederholungsregel")
                         validationResults.append(.create(.recurrenceRule, passed: false))
                         return false
                     }
@@ -486,6 +468,7 @@ struct ICSImportView: View {
                 for day in days {
                     let dayOnly = day.replacingOccurrences(of: "[+-]\\d+", with: "", options: .regularExpression)
                     guard validDays.contains(dayOnly) else {
+                        logger.error("Fehler: Ungültige Wiederholungsregel")
                         validationResults.append(.create(.recurrenceRule, passed: false))
                         return false
                     }
@@ -494,6 +477,7 @@ struct ICSImportView: View {
                 let days = value.components(separatedBy: ",")
                 for day in days {
                     guard let n = Int(day), abs(n) <= 31, n != 0 else {
+                        logger.error("Fehler: Ungültige Wiederholungsregel")
                         validationResults.append(.create(.recurrenceRule, passed: false))
                         return false
                     }
@@ -502,6 +486,7 @@ struct ICSImportView: View {
                 let months = value.components(separatedBy: ",")
                 for month in months {
                     guard let n = Int(month), n >= 1, n <= 12 else {
+                        logger.error("Fehler: Ungültige Wiederholungsregel")
                         validationResults.append(.create(.recurrenceRule, passed: false))
                         return false
                     }
@@ -512,31 +497,39 @@ struct ICSImportView: View {
         }
         
         guard hasFreq else {
+            logger.error("Fehler: Ungültige Wiederholungsregel")
             validationResults.append(.create(.recurrenceRule, passed: false))
             return false
         }
         
+        logger.debug("Wiederholungsregel validiert")
         validationResults.append(.create(.recurrenceRule, passed: true))
         return true
     }
     
     private func createEventFromProperties(_ properties: [String: String]) -> ICSEvent? {
+        logger.debug("Erstelle Event aus Properties: \(properties)")
+        
         // Validiere erforderliche Felder
         guard let title = properties["SUMMARY"],
               !title.isEmpty else {
+            logger.error("Fehler: Fehlender oder leerer SUMMARY")
             validationResults.append(.create(.requiredFields, passed: false))
             return nil
         }
         
         // Validiere DTSTAMP
         guard properties["DTSTAMP"] != nil else {
+            logger.error("Fehler: Fehlendes DTSTAMP")
             validationResults.append(.create(.requiredFields, passed: false))
             return nil
         }
         
         // Validiere RRULE wenn vorhanden
         if let rrule = properties["RRULE"] {
+            logger.debug("Validiere RRULE: \(rrule)")
             guard validateRecurrenceRule(rrule) else {
+                logger.error("Fehler: Ungültige RRULE")
                 return nil
             }
         }
@@ -548,6 +541,7 @@ struct ICSImportView: View {
                 params["FMTTYPE"] = fmttype
             }
             guard validateAttachment(attach, params: params) else {
+                logger.error("Fehler: Ungültiger Anhang")
                 return nil
             }
         }
@@ -595,10 +589,12 @@ struct ICSImportView: View {
         guard let start = startDate,
               let end = endDate,
               end >= start else {
+            logger.error("Fehler: Ungültige Datums-Logik - Start: \(String(describing: startDate)), End: \(String(describing: endDate))")
             validationResults.append(.create(.duration, passed: false))
             return nil
         }
         
+        logger.debug("Event erfolgreich erstellt")
         validationResults.append(.create(.duration, passed: true))
         
         return ICSEvent(
