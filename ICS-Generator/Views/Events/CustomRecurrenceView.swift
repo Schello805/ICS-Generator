@@ -118,7 +118,7 @@ struct CustomRecurrenceView: View {
     }
     
     private func saveCustomRecurrence() {
-        let weekDaysSet = frequency == .weekly && !selectedWeekDays.isEmpty ? selectedWeekDays : nil
+        let weekDaysSet = frequency == .weekly && !selectedWeekDays.isEmpty ? selectedWeekDays : Set<ICSEvent.WeekDay>()
         
         let newCustomRecurrence = ICSEvent.CustomRecurrence(
             frequency: frequency,

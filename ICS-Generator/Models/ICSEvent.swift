@@ -337,17 +337,33 @@ struct ICSEvent: Identifiable, Codable, Hashable {
     }
     
     enum AlertTime: String, CaseIterable, Codable {
-        case none = "none"
-        case atTime = "at_time"
-        case fiveMinutes = "5_minutes"
-        case tenMinutes = "10_minutes"
-        case fifteenMinutes = "15_minutes"
-        case thirtyMinutes = "30_minutes"
-        case oneHour = "1_hour"
-        case twoHours = "2_hours"
-        case oneDay = "1_day"
-        case twoDays = "2_days"
-        case oneWeek = "1_week"
+        case none = "NONE"
+        case atTime = "AT_TIME"
+        case fiveMinutes = "5_MINUTES"
+        case tenMinutes = "10_MINUTES"
+        case fifteenMinutes = "15_MINUTES"
+        case thirtyMinutes = "30_MINUTES"
+        case oneHour = "1_HOUR"
+        case twoHours = "2_HOURS"
+        case oneDay = "1_DAY"
+        case twoDays = "2_DAYS"
+        case oneWeek = "1_WEEK"
+        
+        var localizedString: String {
+            switch self {
+            case .none: return String(localized: "Keine")
+            case .atTime: return String(localized: "Zur Startzeit")
+            case .fiveMinutes: return String(localized: "5 Minuten vorher")
+            case .tenMinutes: return String(localized: "10 Minuten vorher")
+            case .fifteenMinutes: return String(localized: "15 Minuten vorher")
+            case .thirtyMinutes: return String(localized: "30 Minuten vorher")
+            case .oneHour: return String(localized: "1 Stunde vorher")
+            case .twoHours: return String(localized: "2 Stunden vorher")
+            case .oneDay: return String(localized: "1 Tag vorher")
+            case .twoDays: return String(localized: "2 Tage vorher")
+            case .oneWeek: return String(localized: "1 Woche vorher")
+            }
+        }
         
         var triggerValue: String {
             switch self {
@@ -408,12 +424,22 @@ struct ICSEvent: Identifiable, Codable, Hashable {
         
         var localizedString: String {
             switch self {
-            case .none: return "Keine"
-            case .daily: return "Täglich"
-            case .weekly: return "Wöchentlich"
-            case .monthly: return "Monatlich"
-            case .yearly: return "Jährlich"
-            case .custom: return "Benutzerdefiniert"
+            case .none: return String(localized: "Nie")
+            case .daily: return String(localized: "Täglich")
+            case .weekly: return String(localized: "Wöchentlich")
+            case .monthly: return String(localized: "Monatlich")
+            case .yearly: return String(localized: "Jährlich")
+            case .custom: return String(localized: "Benutzerdefiniert")
+            }
+        }
+        
+        func intervalText(count: Int) -> String {
+            switch self {
+            case .daily: return count == 1 ? String(localized: "Tag") : String(localized: "Tage")
+            case .weekly: return count == 1 ? String(localized: "Woche") : String(localized: "Wochen")
+            case .monthly: return count == 1 ? String(localized: "Monat") : String(localized: "Monate")
+            case .yearly: return count == 1 ? String(localized: "Jahr") : String(localized: "Jahre")
+            default: return ""
             }
         }
         

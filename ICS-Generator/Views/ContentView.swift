@@ -39,8 +39,36 @@ struct ContentView_Previews: PreviewProvider {
         let mockViewModel = EventViewModel()
         // Add some test events
         mockViewModel.events = [
-            ICSEvent(title: "Test Event 1", startDate: Date(), endDate: Date().addingTimeInterval(3600)),
-            ICSEvent(title: "Test Event 2", startDate: Date().addingTimeInterval(7200), endDate: Date().addingTimeInterval(10800))
+            ICSEvent(
+                title: "Test Event 1",
+                startDate: Date(),
+                endDate: Date().addingTimeInterval(3600),
+                isAllDay: false,
+                location: nil,
+                notes: nil,
+                url: nil,
+                alert: .fifteenMinutes,
+                secondAlert: .none,
+                travelTime: 0,
+                recurrence: .none,
+                customRecurrence: nil,
+                attachments: []
+            ),
+            ICSEvent(
+                title: "Test Event 2",
+                startDate: Date().addingTimeInterval(7200),
+                endDate: Date().addingTimeInterval(10800),
+                isAllDay: false,
+                location: nil,
+                notes: nil,
+                url: nil,
+                alert: .fifteenMinutes,
+                secondAlert: .none,
+                travelTime: 0,
+                recurrence: .none,
+                customRecurrence: nil,
+                attachments: []
+            )
         ]
         
         return ContentView()

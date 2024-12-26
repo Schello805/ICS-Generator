@@ -603,7 +603,14 @@ struct ICSImportView: View {
             endDate: end,
             isAllDay: isAllDay,
             location: properties["LOCATION"],
-            notes: properties["DESCRIPTION"]
+            notes: properties["DESCRIPTION"],
+            url: properties["URL"],
+            alert: .fifteenMinutes,
+            secondAlert: .none,
+            travelTime: 0,
+            recurrence: .none,
+            customRecurrence: nil,
+            attachments: []
         )
     }
     

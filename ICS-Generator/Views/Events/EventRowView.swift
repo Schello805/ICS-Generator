@@ -111,23 +111,48 @@ struct EventRowView: View {
             title: "Wichtiges Meeting",
             startDate: Date(),
             endDate: Date().addingTimeInterval(3600),
+            isAllDay: false,
             location: "Konferenzraum 1",
-            alert: .atTime
+            notes: nil,
+            url: nil,
+            alert: .atTime,
+            secondAlert: .none,
+            travelTime: 0,
+            recurrence: .none,
+            customRecurrence: nil,
+            attachments: []
         ), viewModel: EventViewModel())
         
         EventRowView(event: ICSEvent(
             title: "Geburtstag",
             startDate: Date().addingTimeInterval(86400),
             endDate: Date().addingTimeInterval(86400),
-            isAllDay: true
+            isAllDay: true,
+            location: nil,
+            notes: nil,
+            url: nil,
+            alert: .fifteenMinutes,
+            secondAlert: .none,
+            travelTime: 0,
+            recurrence: .none,
+            customRecurrence: nil,
+            attachments: []
         ), viewModel: EventViewModel())
         
         EventRowView(event: ICSEvent(
             title: "Lange Konferenz mit sehr langem Titel der abgeschnitten werden sollte",
             startDate: Date().addingTimeInterval(7*86400),
             endDate: Date().addingTimeInterval(8*86400),
+            isAllDay: false,
             location: "Ein sehr langer Ort der ebenfalls abgeschnitten werden sollte",
-            alert: .none
+            notes: nil,
+            url: nil,
+            alert: .none,
+            secondAlert: .none,
+            travelTime: 0,
+            recurrence: .none,
+            customRecurrence: nil,
+            attachments: []
         ), viewModel: EventViewModel())
     }
     .padding()

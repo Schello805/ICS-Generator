@@ -203,106 +203,109 @@ struct EventEditorView: View {
                     }
                 }
                 
-                // Additional Options
-                Section {
-                    NavigationLink {
-                        Form {
-                            Picker("Hinweis", selection: $alert) {
-                                Text("Keine").tag(ICSEvent.AlertTime.none)
-                                Text("Zur Startzeit").tag(ICSEvent.AlertTime.atTime)
-                                Text("5 Minuten vorher").tag(ICSEvent.AlertTime.fiveMinutes)
-                                Text("10 Minuten vorher").tag(ICSEvent.AlertTime.tenMinutes)
-                                Text("15 Minuten vorher").tag(ICSEvent.AlertTime.fifteenMinutes)
-                                Text("30 Minuten vorher").tag(ICSEvent.AlertTime.thirtyMinutes)
-                                Text("1 Stunde vorher").tag(ICSEvent.AlertTime.oneHour)
-                                Text("2 Stunden vorher").tag(ICSEvent.AlertTime.twoHours)
-                                Text("1 Tag vorher").tag(ICSEvent.AlertTime.oneDay)
-                                Text("2 Tage vorher").tag(ICSEvent.AlertTime.twoDays)
-                                Text("1 Woche vorher").tag(ICSEvent.AlertTime.oneWeek)
-                            }
-                            .onChange(of: alert) { oldValue, newValue in
-                                checkChanges()
-                            }
-                        }
-                        .navigationTitle("Hinweis")
-                    } label: {
-                        HStack {
-                            Text("Hinweis")
-                            Spacer()
-                            Text(alertTimeToString(alert))
-                                .foregroundColor(.secondary)
+                // Erinnerungen und Wiederholungen
+                Section(header: Text("Erinnerungen & Wiederholungen")) {
+                    // Erste Erinnerung
+                    Picker("Erinnerung", selection: $alert) {
+                        ForEach(ICSEvent.AlertTime.allCases, id: \.self) { alertTime in
+                            Text(alertTime.localizedString).tag(alertTime)
                         }
                     }
+                    .onChange(of: alert) { oldValue, newValue in checkChanges() }
                     
-                    NavigationLink {
-                        Form {
-                            Picker("2. Hinweis", selection: $secondAlert) {
-                                Text("Keine").tag(ICSEvent.AlertTime.none)
-                                Text("Zur Startzeit").tag(ICSEvent.AlertTime.atTime)
-                                Text("5 Minuten vorher").tag(ICSEvent.AlertTime.fiveMinutes)
-                                Text("10 Minuten vorher").tag(ICSEvent.AlertTime.tenMinutes)
-                                Text("15 Minuten vorher").tag(ICSEvent.AlertTime.fifteenMinutes)
-                                Text("30 Minuten vorher").tag(ICSEvent.AlertTime.thirtyMinutes)
-                                Text("1 Stunde vorher").tag(ICSEvent.AlertTime.oneHour)
-                                Text("2 Stunden vorher").tag(ICSEvent.AlertTime.twoHours)
-                                Text("1 Tag vorher").tag(ICSEvent.AlertTime.oneDay)
-                                Text("2 Tage vorher").tag(ICSEvent.AlertTime.twoDays)
-                                Text("1 Woche vorher").tag(ICSEvent.AlertTime.oneWeek)
-                            }
-                            .onChange(of: secondAlert) { oldValue, newValue in
-                                checkChanges()
-                            }
-                        }
-                        .navigationTitle("2. Hinweis")
-                    } label: {
-                        HStack {
-                            Text("2. Hinweis")
-                            Spacer()
-                            Text(alertTimeToString(secondAlert))
-                                .foregroundColor(.secondary)
+                    // Zweite Erinnerung
+                    Picker("Zweite Erinnerung", selection: $secondAlert) {
+                        ForEach(ICSEvent.AlertTime.allCases, id: \.self) { alertTime in
+                            Text(alertTime.localizedString).tag(alertTime)
                         }
                     }
+                    .onChange(of: secondAlert) { oldValue, newValue in checkChanges() }
                     
-                    NavigationLink {
-                        Form {
-                            Stepper("Anfahrtszeit: \(travelTime) Minuten", value: $travelTime, in: 0...180, step: 15)
-                                .onChange(of: travelTime) { oldValue, newValue in
+                    // Wiederholung
+                    Picker("Wiederholen", selection: $recurrence) {
+                        ForEach(ICSEvent.RecurrenceRule.allCases, id: \.self) { rule in
+                            Text(rule.localizedString).tag(rule)
+                        }
+                    }
+                    .onChange(of: recurrence) { oldValue, newValue in checkChanges() }
+                    
+                    if recurrence == .custom {
+                        // Benutzerdefinierte Wiederholung
+                        Picker("Frequenz", selection: Binding(
+                            get: { customRecurrence?.frequency ?? .daily },
+                            set: { frequency in
+                                var custom = customRecurrence ?? ICSEvent.CustomRecurrence(
+                                    frequency: .daily,
+                                    interval: 1,
+                                    count: nil,
+                                    until: nil,
+                                    weekDays: []
+                                )
+                                custom.frequency = frequency
+                                customRecurrence = custom
+                                checkChanges()
+                            }
+                        )) {
+                            Text("Täglich").tag(ICSEvent.RecurrenceRule.daily)
+                            Text("Wöchentlich").tag(ICSEvent.RecurrenceRule.weekly)
+                            Text("Monatlich").tag(ICSEvent.RecurrenceRule.monthly)
+                            Text("Jährlich").tag(ICSEvent.RecurrenceRule.yearly)
+                        }
+                        
+                        // Interval
+                        let intervalBinding = Binding(
+                            get: { customRecurrence?.interval ?? 1 },
+                            set: { interval in
+                                var custom = customRecurrence ?? ICSEvent.CustomRecurrence(
+                                    frequency: .daily,
+                                    interval: 1,
+                                    count: nil,
+                                    until: nil,
+                                    weekDays: []
+                                )
+                                custom.interval = interval
+                                customRecurrence = custom
+                                checkChanges()
+                            }
+                        )
+                        
+                        Stepper(
+                            "Alle \(intervalBinding.wrappedValue) \(customRecurrence?.frequency.intervalText(count: intervalBinding.wrappedValue) ?? "")",
+                            value: intervalBinding,
+                            in: 1...99
+                        )
+                        
+                        if customRecurrence?.frequency == .weekly {
+                            let weekDaysBinding = Binding(
+                                get: { customRecurrence?.weekDays ?? [] },
+                                set: { weekDays in
+                                    var custom = customRecurrence ?? ICSEvent.CustomRecurrence(
+                                        frequency: .daily,
+                                        interval: 1,
+                                        count: nil,
+                                        until: nil,
+                                        weekDays: []
+                                    )
+                                    custom.weekDays = weekDays
+                                    customRecurrence = custom
                                     checkChanges()
                                 }
-                        }
-                        .navigationTitle("Anfahrtszeit")
-                    } label: {
-                        HStack {
-                            Text("Anfahrtszeit")
-                            Spacer()
-                            if travelTime > 0 {
-                                Text("\(travelTime) Minuten")
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text("Ohne")
-                                    .foregroundColor(.secondary)
+                            )
+                            
+                            ForEach(ICSEvent.WeekDay.allCases, id: \.self) { weekDay in
+                                Toggle(weekDay.localizedName, isOn: Binding(
+                                    get: { weekDaysBinding.wrappedValue.contains(weekDay) },
+                                    set: { isSelected in
+                                        var weekDays = weekDaysBinding.wrappedValue
+                                        if isSelected {
+                                            weekDays.insert(weekDay)
+                                        } else {
+                                            weekDays.remove(weekDay)
+                                        }
+                                        weekDaysBinding.wrappedValue = weekDays
+                                    }
+                                ))
                             }
-                        }
-                    }
-                    
-                    NavigationLink {
-                        Form {
-                            Picker("Wiederholen", selection: $recurrence) {
-                                ForEach(ICSEvent.RecurrenceRule.allCases, id: \.self) { rule in
-                                    Text(rule.localizedString).tag(rule)
-                                }
-                            }
-                            .onChange(of: recurrence) { oldValue, newValue in
-                                checkChanges()
-                            }
-                        }
-                        .navigationTitle("Wiederholen")
-                    } label: {
-                        HStack {
-                            Text("Wiederholen")
-                            Spacer()
-                            Text(recurrence.localizedString)
-                                .foregroundColor(.secondary)
                         }
                     }
                 }
